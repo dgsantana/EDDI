@@ -220,7 +220,7 @@ namespace EddiCargoMonitor
                 }
                 else
                 {
-                    cargo.other = 1;
+                    newCargo.other = 1;
                 }
                 AddCargo(newCargo);
             }
