@@ -210,7 +210,6 @@ namespace EddiCargoMonitor
                 }
                 cargo.total = cargo.haulage + cargo.stolen + cargo.other;
             }
-
             else
             {
                 Cargo newCargo = new Cargo(@event.commodity, @event.commodity.avgprice ?? 0, 1);
