@@ -170,7 +170,7 @@ namespace EddiCargoMonitor
             foreach (Cargo cargo in @event.inventory)
             {
                 Cargo inventoryCargo = inventory.FirstOrDefault(c => c.name == cargo.name);
-                if (inventoryCargo != null)
+                if (inventoryCargo != null && inventoryCargo.total != cargo.total)
                 {
                     // Match of commodity
                     inventoryCargo.total = cargo.total;
