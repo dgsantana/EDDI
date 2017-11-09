@@ -172,9 +172,9 @@ namespace EddiCargoMonitor
                 Cargo inventoryCargo = inventory.FirstOrDefault(c => c.name == cargo.name);
                 if (inventoryCargo != null && inventoryCargo.total != cargo.total)
                 {
-                    // Match of commodity
                     inventoryCargo.total = cargo.total;
-                    cargo.other = cargo.total - cargo.stolen - cargo.haulage;
+                    // we aren't given cargo.stolen or cargo.haulage so we just have to put the balancing amount in inventoryCargo.other
+                    inventoryCargo.other = inventoryCargo.total - inventoryCargo.stolen - inventoryCargo.haulage;
                 }
                 else
                 {
