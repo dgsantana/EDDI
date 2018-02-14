@@ -114,29 +114,25 @@ namespace EddiEvents
 
         public static Type TypeByName(string name)
         {
-            Type value;
-            TYPES.TryGetValue(name, out value);
+            TYPES.TryGetValue(name, out var value);
             return value;
         }
 
         public static object SampleByName(string name)
         {
-            object value;
-            SAMPLES.TryGetValue(name, out value);
+            SAMPLES.TryGetValue(name, out var value);
             return value;
         }
 
         public static string DescriptionByName(string name)
         {
-            string value;
-            DESCRIPTIONS.TryGetValue(name, out value);
+            DESCRIPTIONS.TryGetValue(name, out var value);
             return value;
         }
 
         public static string DefaultByName(string name)
         {
-            string value;
-            DEFAULTS.TryGetValue(name, out value);
+            DEFAULTS.TryGetValue(name, out var value);
             return value;
         }
     }

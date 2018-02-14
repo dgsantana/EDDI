@@ -4,20 +4,21 @@ using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using Utilities;
+using Utilities.Collections;
 
 namespace EddiMaterialMonitor
 {
     /// <summary>Storage for configuration of material amounts</summary>
     public class MaterialMonitorConfiguration
     {
-        public ObservableCollection<MaterialAmount> materials { get; set; }
+        public SynchronizedObservableCollection<MaterialAmount> Materials { get; set; }
 
         [JsonIgnore]
-        private string dataPath;
+        private string _dataPath;
 
         public MaterialMonitorConfiguration()
         {
-            materials = new ObservableCollection<MaterialAmount>();
+            Materials = new SynchronizedObservableCollection<MaterialAmount>();
         }
 
         /// <summary>
@@ -52,7 +53,7 @@ namespace EddiMaterialMonitor
                 configuration = new MaterialMonitorConfiguration();
             }
 
-            configuration.dataPath = filename;
+            configuration._dataPath = filename;
             return configuration;
         }
 
@@ -68,7 +69,7 @@ namespace EddiMaterialMonitor
 
             if (filename == null)
             {
-                filename = dataPath;
+                filename = _dataPath;
             }
             if (filename == null)
             {

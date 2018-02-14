@@ -10,70 +10,64 @@ namespace EddiSpeechResponder
         [JsonProperty("description")]
         public string Description { get; set; }
         [JsonProperty("enabled")]
-        private bool enabled;
+        private bool _enabled;
         [JsonProperty("priority")]
-        private int priority = 3;
+        private int _priority = 3;
         [JsonProperty("responder")]
-        private bool responder;
+        private bool _responder;
         [JsonProperty("script")]
-        private string script;
+        private string _script;
         [JsonProperty("default")]
-        private bool isDefault;
+        private bool _isDefault;
 
         public event PropertyChangedEventHandler PropertyChanged;
 
         [JsonIgnore]
         public bool Enabled
         {
-            get { return enabled; }
-            set { enabled = value;  OnPropertyChanged("Enabled"); }
+            get => _enabled;
+            set { _enabled = value;  OnPropertyChanged("Enabled"); }
         }
 
         [JsonIgnore]
         public int Priority
         {
-            get { return priority; }
-            set { priority = value; OnPropertyChanged("Priority"); }
+            get => _priority;
+            set { _priority = value; OnPropertyChanged("Priority"); }
         }
 
         [JsonIgnore]
         public bool Responder
         {
-            get { return responder; }
-            private set { responder = value; OnPropertyChanged("Responder"); }
+            get => _responder;
+            private set { _responder = value; OnPropertyChanged("Responder"); }
         }
 
         [JsonIgnore]
         public bool Default
         {
-            get { return isDefault; }
-            set { isDefault = value; OnPropertyChanged("Default"); }
+            get => _isDefault;
+            set { _isDefault = value; OnPropertyChanged("Default"); }
         }
 
         [JsonIgnore]
-        public bool IsDeleteable
-        {
-            get { return !responder;  }
-        }
+        public bool IsDeleteable => !_responder;
 
         [JsonIgnore]
         public string Value
         {
-            get { return script; }
-            set { script = value; OnPropertyChanged("Value"); }
+            get => _script;
+            set { _script = value; OnPropertyChanged("Value"); }
         }
 
         [JsonIgnore]
-        public bool HasValue
-        {
-            get { return script != null; }
-        }
+        public bool HasValue => _script != null;
 
         public Script(string name, string description, bool responder, string script, int priority = 3, bool Default = false)
         {
             Name = name;
             Description = description;
-            this.responder = responder;
+            _responder = responder;
             Value = script;
             Priority = priority;
             Enabled = true;

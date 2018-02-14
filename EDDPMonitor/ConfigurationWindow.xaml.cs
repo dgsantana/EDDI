@@ -1,4 +1,4 @@
-﻿using Eddi;
+﻿using EDDI;
 using EddiDataDefinitions;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -97,7 +97,7 @@ namespace EddiEddpMonitor
             {
                 configuration.ToFile();
             }
-            EDDI.Instance.Reload("EDDP monitor");
+            EDDI.Core.Eddi.Instance.Reload("EDDP monitor");
         }
     }
 }

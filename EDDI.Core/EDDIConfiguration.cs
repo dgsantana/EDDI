@@ -2,9 +2,10 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reactive.Linq;
 using Utilities;
 
-namespace Eddi
+namespace EDDI
 {
     /// <summary>Configuration for EDDI</summary>
     public class EDDIConfiguration
@@ -22,14 +23,16 @@ namespace Eddi
         [JsonProperty("plugins")]
         public IDictionary<string, bool> Plugins { get; set; }
         [JsonProperty("Gender")]
-        public string Gender { get; set; } = "Male";
+        public string Gender { get; set; }
 
         /// <summary>the current export target for the shipyard</summary>
         [JsonProperty("exporttarget")]
-        public string exporttarget { get; set; } = "Coriolis";
+        public string ExportTarget { get; set; }
+
+        [JsonProperty("errorReporting")] public bool ErrorReporting { get; set; }
 
         [JsonIgnore]
-        private string dataPath;
+        private string _dataPath;
 
         public EDDIConfiguration()
         {
@@ -37,9 +40,38 @@ namespace Eddi
             Beta = false;
             Insurance = 5;
             Plugins = new Dictionary<string, bool>();
-            exporttarget = "Coriolis";
+            ExportTarget = "Coriolis";
             Gender = "Male";
         }
+
+        static EDDIConfiguration()
+        {
+            if (!Directory.Exists(Constants.DATA_DIR))
+                Directory.CreateDirectory(Constants.DATA_DIR);
+            var watcher = new FileSystemWatcher(Constants.DATA_DIR, "eddi.json") {EnableRaisingEvents = true};
+            OnConfigurationChange = Observable.Create<EDDIConfiguration>(x =>
+                {
+                    var fswChanged = Observable.FromEvent<FileSystemEventHandler, FileSystemEventArgs>(handler =>
+                        {
+                            void FsHandler(object sender, FileSystemEventArgs e)
+                            {
+                                handler(e);
+                            }
+
+                            return FsHandler;
+                        },
+                        fsHandler => watcher.Changed += fsHandler,
+                        fsHandler => watcher.Changed -= fsHandler);
+                    return fswChanged.Subscribe(y=>
+                    {
+                        if(!_saving)
+                            x.OnNext(FromFile());
+                    });
+                });
+        }
+
+        public static IObservable<EDDIConfiguration> OnConfigurationChange;
+        private static bool _saving;
 
         /// <summary>
         /// Obtain configuration from a file.  If the file name is not supplied the the default
@@ -52,7 +84,7 @@ namespace Eddi
                 filename = Constants.DATA_DIR + @"\eddi.json";
             }
 
-            EDDIConfiguration configuration = new EDDIConfiguration();
+            var configuration = new EDDIConfiguration();
             if (File.Exists(filename))
             {
                 try
@@ -74,7 +106,7 @@ namespace Eddi
                 configuration = new EDDIConfiguration();
             }
 
-            configuration.dataPath = filename;
+            configuration._dataPath = filename;
             if (configuration.Plugins == null)
             {
                 configuration.Plugins = new Dictionary<string, bool>();
@@ -90,17 +122,15 @@ namespace Eddi
         /// </summary>
         public void ToFile(string filename=null)
         {
+            _saving = true;
             if (filename == null)
-            {
-                filename = dataPath;
-            }
+                filename = _dataPath;
             if (filename == null)
-            {
                 filename = Constants.DATA_DIR + @"\eddi.json";
-            }
 
-            string json = JsonConvert.SerializeObject(this, Formatting.Indented);
+            var json = JsonConvert.SerializeObject(this, Formatting.Indented);
             Files.Write(filename, json);
+            _saving = false;
         }
     }
 }

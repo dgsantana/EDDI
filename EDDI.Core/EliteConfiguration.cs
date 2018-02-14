@@ -1,8 +1,8 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
+using Newtonsoft.Json;
 using Utilities;
 
-namespace Eddi
+namespace EDDI.Core
 {
     /// <summary>Configuration for Elite</summary>
     public class EliteConfiguration

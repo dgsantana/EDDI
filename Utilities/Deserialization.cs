@@ -5,14 +5,12 @@ using System.Linq;
 
 namespace Utilities
 {
-    public class Deserializtion
+    public class Deserialization
     {
         public static IDictionary<string, object> DeserializeData(string data)
         {
             if (data == null)
-            {
                 return new Dictionary<string, object>();
-            }
 
             Logging.Debug("Deserializing " + data);
             var values = JsonConvert.DeserializeObject<Dictionary<string, object>>(data);
@@ -20,17 +18,10 @@ namespace Utilities
             return DeserializeData(values);
         }
 
-        private static IDictionary<string, object> DeserializeData(JObject data)
+        private static IDictionary<string, object> DeserializeData(JToken data)
         {
             var dict = data.ToObject<Dictionary<string, object>>();
-            if (dict != null)
-            {
-                return DeserializeData(dict);
-            }
-            else
-            {
-                return null;
-            }
+            return dict != null ? DeserializeData(dict) : null;
         }
 
         private static IDictionary<string, object> DeserializeData(IDictionary<string, object> data)
@@ -39,11 +30,15 @@ namespace Utilities
             {
                 var value = data[key];
 
-                if (value is JObject)
-                    data[key] = DeserializeData(value as JObject);
-
-                if (value is JArray)
-                    data[key] = DeserializeData(value as JArray);
+                switch (value)
+                {
+                    case JObject _:
+                        data[key] = DeserializeData(value as JObject);
+                        break;
+                    case JArray _:
+                        data[key] = DeserializeData(value as JArray);
+                        break;
+                }
             }
 
             return data;
@@ -53,15 +48,19 @@ namespace Utilities
         {
             var list = data.ToObject<List<object>>();
 
-            for (int i = 0; i < list.Count; i++)
+            for (var i = 0; i < list.Count; i++)
             {
                 var value = list[i];
 
-                if (value is JObject)
-                    list[i] = DeserializeData(value as JObject);
-
-                if (value is JArray)
-                    list[i] = DeserializeData(value as JArray);
+                switch (value)
+                {
+                    case JObject _:
+                        list[i] = DeserializeData(value as JObject);
+                        break;
+                    case JArray _:
+                        list[i] = DeserializeData(value as JArray);
+                        break;
+                }
             }
             return list;
         }

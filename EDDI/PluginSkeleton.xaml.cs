@@ -1,32 +1,31 @@
 ﻿using System.Windows;
-using System.Windows.Controls;
 
-namespace Eddi
+namespace EDDI
 {
     /// <summary>
     /// Interaction logic for PluginSkeleton.xaml
     /// </summary>
-    public partial class PluginSkeleton : UserControl
+    public partial class PluginSkeleton
     {
-        string pluginName;
+        private readonly string _pluginName;
 
         public PluginSkeleton(string pluginName)
         {
             InitializeComponent();
-            this.pluginName = pluginName;
+            _pluginName = pluginName;
         }
 
-        private void pluginenabled_Checked(object sender, RoutedEventArgs e)
+        private void Pluginenabled_Checked(object sender, RoutedEventArgs e)
         {
-            EDDIConfiguration configuration = EDDIConfiguration.FromFile();
-            configuration.Plugins[pluginName] = true;
+            var configuration = EDDIConfiguration.FromFile();
+            configuration.Plugins[_pluginName] = true;
             configuration.ToFile();
         }
 
-        private void pluginenabled_Unchecked(object sender, RoutedEventArgs e)
+        private void Pluginenabled_Unchecked(object sender, RoutedEventArgs e)
         {
-            EDDIConfiguration configuration = EDDIConfiguration.FromFile();
-            configuration.Plugins[pluginName] = false;
+            var configuration = EDDIConfiguration.FromFile();
+            configuration.Plugins[_pluginName] = false;
             configuration.ToFile();
         }
     }

@@ -17,16 +17,17 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Forms;
 using System.Windows.Input;
+using EDDI.Core;
 using Utilities;
 
-namespace Eddi
+namespace EDDI
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
     public partial class MainWindow : Window
     {
-        private Profile profile;
+        private Profile _profile;
         private bool fromVA;
 
         public MainWindow() : this(false) { }
@@ -47,7 +48,7 @@ namespace Eddi
                     Properties.Settings.Default.Maximized = false;
 
                     // If opened from VoiceAttack, don't allow minimized state
-                    Properties.Settings.Default.Minimized = fromVA ? false: true;
+                    Properties.Settings.Default.Minimized = !fromVA;
 
                     break;
                 default:
@@ -60,7 +61,7 @@ namespace Eddi
             Properties.Settings.Default.WindowPosition = savePosition;
 
             // Remember which tab we have selected in EDDI
-            Properties.Settings.Default.SelectedTab = this.tabControl.SelectedIndex;
+            Properties.Settings.Default.SelectedTab = tabControl.SelectedIndex;
 
             Properties.Settings.Default.Save();
         }
@@ -94,7 +95,7 @@ namespace Eddi
                 Height = Math.Min(Screen.PrimaryScreen.Bounds.Height, designedHeight);
             }
 
-            tabControl.SelectedIndex = Eddi.Properties.Settings.Default.SelectedTab;
+            tabControl.SelectedIndex = global::EDDI.Properties.Settings.Default.SelectedTab;
 
             // Check detected monitors to see if the saved window size and location is valid
             bool isWindowValid(Rect rect)
@@ -143,8 +144,8 @@ namespace Eddi
             this.fromVA = fromVA;
 
             // Start the EDDI instance
-            EDDI.FromVA = fromVA;
-            EDDI.Instance.Start();
+            EDDI.Core.Eddi.FromVa = fromVA;
+            EDDI.Core.Eddi.Instance.Start();
 
             // Configure the EDDI tab
             setStatusInfo();
@@ -186,14 +187,14 @@ namespace Eddi
             // See if the credentials work
             try
             {
-                profile = CompanionAppService.Instance.Profile();
-                if (profile == null)
+                _profile = CompanionAppService.Instance.Profile();
+                if (_profile == null)
                 {
                     setUpCompanionAppComplete("Your connection to the Frontier API is good but experiencing temporary issues.  Your information should be available soon");
                 }
                 else
                 {
-                    setUpCompanionAppComplete("Your connection to the Frontier API is operational, Commander " + profile.Cmdr.name);
+                    setUpCompanionAppComplete("Your connection to the Frontier API is operational, Commander " + _profile.Cmdr.name);
                 }
             }
             catch (Exception)
@@ -249,19 +250,19 @@ namespace Eddi
             ttsTestShipDropDown.ItemsSource = ShipDefinitions.ShipModels;
             ttsTestShipDropDown.Text = "Adder";
 
-            foreach (EDDIMonitor monitor in EDDI.Instance.monitors)
+            foreach (IEDDIMonitor monitor in EDDI.Core.Eddi.Instance.Monitors)
             {
-                Logging.Debug("Adding configuration tab for " + monitor.MonitorName());
+                Logging.Debug("Adding configuration tab for " + monitor.MonitorName);
 
                 System.Windows.Controls.UserControl monitorConfiguration = monitor.ConfigurationTabItem();
                 // Only show a tab if this can be turned off or has configuration elements
-                if (monitorConfiguration != null || !monitor.IsRequired())
+                if (monitorConfiguration != null || !monitor.IsRequired)
                 {
-                    PluginSkeleton skeleton = new PluginSkeleton(monitor.MonitorName());
-                    skeleton.plugindescription.Text = monitor.MonitorDescription();
+                    PluginSkeleton skeleton = new PluginSkeleton(monitor.MonitorName);
+                    skeleton.plugindescription.Text = monitor.MonitorDescription;
 
                     bool enabled;
-                    if (eddiConfiguration.Plugins.TryGetValue(monitor.MonitorName(), out enabled))
+                    if (eddiConfiguration.Plugins.TryGetValue(monitor.MonitorName, out enabled))
                     {
                         skeleton.pluginenabled.IsChecked = enabled;
                     }
@@ -278,21 +279,21 @@ namespace Eddi
                         skeleton.panel.Children.Add(monitorConfiguration);
                     }
 
-                    TabItem item = new TabItem { Header = monitor.MonitorName() };
+                    TabItem item = new TabItem { Header = monitor.MonitorName };
                     item.Content = skeleton;
                     tabControl.Items.Add(item);
                 }
             }
 
-            foreach (EDDIResponder responder in EDDI.Instance.responders)
+            foreach (IEDDIResponder responder in EDDI.Core.Eddi.Instance.Responders)
             {
-                Logging.Debug("Adding configuration tab for " + responder.ResponderName());
+                Logging.Debug("Adding configuration tab for " + responder.ResponderName);
 
-                PluginSkeleton skeleton = new PluginSkeleton(responder.ResponderName());
-                skeleton.plugindescription.Text = responder.ResponderDescription();
+                PluginSkeleton skeleton = new PluginSkeleton(responder.ResponderName);
+                skeleton.plugindescription.Text = responder.ResponderDescription;
 
                 bool enabled;
-                if (eddiConfiguration.Plugins.TryGetValue(responder.ResponderName(), out enabled))
+                if (eddiConfiguration.Plugins.TryGetValue(responder.ResponderName, out enabled))
                 {
                     skeleton.pluginenabled.IsChecked = enabled;
                 }
@@ -311,13 +312,13 @@ namespace Eddi
                     skeleton.panel.Children.Add(monitorConfiguration);
                 }
 
-                TabItem item = new TabItem { Header = responder.ResponderName() };
+                TabItem item = new TabItem { Header = responder.ResponderName };
                 item.Content = skeleton;
                 tabControl.Items.Add(item);
             }
 
             RestoreWindowState();
-            EDDI.Instance.Start();
+            EDDI.Core.Eddi.Instance.Start();
         }
 
         // Hook the window Loaded event to set minimize/maximize state at startup 
@@ -342,7 +343,7 @@ namespace Eddi
             EDDIConfiguration eddiConfiguration = EDDIConfiguration.FromFile();
             eddiConfiguration.HomeSystem = string.IsNullOrWhiteSpace(eddiHomeSystemText.Text) ? null : eddiHomeSystemText.Text.Trim();
             eddiConfiguration.ToFile();
-            EDDI.Instance.updateHomeSystemStation(eddiConfiguration);
+            EDDI.Core.Eddi.Instance.UpdateHomeSystemStation(eddiConfiguration);
         }
 
         private void homeStationChanged(object sender, TextChangedEventArgs e)
@@ -350,7 +351,7 @@ namespace Eddi
             EDDIConfiguration eddiConfiguration = EDDIConfiguration.FromFile();
             eddiConfiguration.HomeStation = string.IsNullOrWhiteSpace(eddiHomeStationText.Text) ? null : eddiHomeStationText.Text.Trim();
             eddiConfiguration.ToFile();
-            EDDI.Instance.updateHomeSystemStation(eddiConfiguration);
+            EDDI.Core.Eddi.Instance.UpdateHomeSystemStation(eddiConfiguration);
         }
 
         private void insuranceChanged(object sender, TextChangedEventArgs e)
@@ -372,7 +373,7 @@ namespace Eddi
              EDDIConfiguration eddiConfiguration = EDDIConfiguration.FromFile();
              eddiConfiguration.Gender = "Male";
              eddiConfiguration.ToFile();
-             EDDI.Instance.Cmdr.gender = "Male";
+             EDDI.Core.Eddi.Instance.Cmdr.gender = "Male";
           }
 
         private void isFemale_Checked(object sender, RoutedEventArgs e)
@@ -380,7 +381,7 @@ namespace Eddi
              EDDIConfiguration eddiConfiguration = EDDIConfiguration.FromFile();
              eddiConfiguration.Gender = "Female";
              eddiConfiguration.ToFile();
-             EDDI.Instance.Cmdr.gender = "Female";
+             EDDI.Core.Eddi.Instance.Cmdr.gender = "Female";
         }
 
         private void isNeitherGender_Checked(object sender, RoutedEventArgs e)
@@ -388,7 +389,7 @@ namespace Eddi
             EDDIConfiguration eddiConfiguration = EDDIConfiguration.FromFile();
             eddiConfiguration.Gender = "Neither";
             eddiConfiguration.ToFile();
-            EDDI.Instance.Cmdr.gender = "Neither";
+            EDDI.Core.Eddi.Instance.Cmdr.gender = "Neither";
         }
 
         private void verboseLoggingEnabled(object sender, RoutedEventArgs e)
@@ -415,7 +416,7 @@ namespace Eddi
             if (runBetaCheck)
             {
                 // Because we have changed to wanting beta upgrades we need to re-check upgrade information
-                EDDI.Instance.CheckUpgrade();
+                EDDI.Core.Eddi.Instance.CheckUpgrade();
                 setStatusInfo();
             }
             else
@@ -432,7 +433,7 @@ namespace Eddi
             if (runBetaCheck)
             {
                 // Because we have changed to not wanting beta upgrades we need to re-check upgrade information
-                EDDI.Instance.CheckUpgrade();
+                EDDI.Core.Eddi.Instance.CheckUpgrade();
                 setStatusInfo();
             }
             else
@@ -447,11 +448,11 @@ namespace Eddi
             versionText.Text = Constants.EDDI_VERSION;
             Title = "EDDI v." + Constants.EDDI_VERSION;
 
-            if (EDDI.Instance.UpgradeVersion != null)
+            if (EDDI.Core.Eddi.Instance.UpgradeVersion != null)
             {
-                statusText.Text = "Version " + EDDI.Instance.UpgradeVersion + " is available";
+                statusText.Text = "Version " + EDDI.Core.Eddi.Instance.UpgradeVersion + " is available";
                 // Do not show upgrade button if EDDI is started from VA
-                upgradeButton.Visibility = EDDI.FromVA ? Visibility.Collapsed : Visibility.Visible;
+                upgradeButton.Visibility = EDDI.Core.Eddi.FromVa ? Visibility.Collapsed : Visibility.Visible;
             }
             else
             {
@@ -497,17 +498,17 @@ namespace Eddi
                     }
                     else if (CompanionAppService.Instance.CurrentState == CompanionAppService.State.READY)
                     {
-                        if (profile == null)
+                        if (_profile == null)
                         {
-                            profile = CompanionAppService.Instance.Profile();
+                            _profile = CompanionAppService.Instance.Profile();
                         }
-                        if (profile == null)
+                        if (_profile == null)
                         {
                             setUpCompanionAppComplete("Your connection to the Frontier API is good but experiencing temporary issues.  Your information should be available soon");
                         }
                         else
                         {
-                            setUpCompanionAppComplete("Your connection to the Frontier API is operational, Commander " + profile.Cmdr.name);
+                            setUpCompanionAppComplete("Your connection to the Frontier API is operational, Commander " + _profile.Cmdr.name);
                             //setShipyardFromConfiguration();
                         }
                     }
@@ -533,10 +534,10 @@ namespace Eddi
                 {
                     CompanionAppService.Instance.Confirm(code);
                     // All done - see if it works
-                    profile = CompanionAppService.Instance.Profile();
-                    if (profile != null)
+                    _profile = CompanionAppService.Instance.Profile();
+                    if (_profile != null)
                     {
-                        setUpCompanionAppComplete("Your connection to the Frontier API is operational, Commander " + profile.Cmdr.name);
+                        setUpCompanionAppComplete("Your connection to the Frontier API is operational, Commander " + _profile.Cmdr.name);
                         //setShipyardFromConfiguration();
                     }
                 }
@@ -703,7 +704,7 @@ namespace Eddi
                 // (under debugger), monitorThread.Join() would block waiting for a
                 // thread(s) to terminate. Strange, because it does not block when the
                 // window is closed in the normal or maximized state.
-                EDDI.Instance.Stop();
+                EDDI.Core.Eddi.Instance.Stop();
             }
         }
 
@@ -730,7 +731,7 @@ namespace Eddi
         {
             // Write out useful information to the log before procedding
             Logging.Info("EDDI version: " + Constants.EDDI_VERSION);
-            Logging.Info("Commander name: " + (EDDI.Instance.Cmdr != null ? EDDI.Instance.Cmdr.name : "unknown"));
+            Logging.Info("Commander name: " + (EDDI.Core.Eddi.Instance.Cmdr != null ? EDDI.Core.Eddi.Instance.Cmdr.name : "unknown"));
 
             // Prepare a truncated log file for export if verbose logging is enabled
             if (eddiVerboseLogging.IsChecked.Value)
@@ -827,7 +828,7 @@ namespace Eddi
 
         private void upgradeClicked(object sender, RoutedEventArgs e)
         {
-            EDDI.Instance.Upgrade();
+            EDDI.Core.Eddi.Instance.Upgrade();
         }
 
         private void EDDIClicked(object sender, RoutedEventArgs e)

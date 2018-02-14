@@ -1,6 +1,6 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
-using Eddi;
+using EDDI;
 
 namespace Tests
 {

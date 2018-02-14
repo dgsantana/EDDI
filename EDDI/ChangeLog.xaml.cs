@@ -4,7 +4,7 @@ using System.Reflection;
 using System.Windows;
 using Utilities;
 
-namespace Eddi
+namespace EDDI
 {
     /// <summary>
     /// Interaction logic for ChangeLogWindow.xaml

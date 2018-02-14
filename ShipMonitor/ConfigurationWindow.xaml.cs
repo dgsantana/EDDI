@@ -1,4 +1,4 @@
-﻿using Eddi;
+﻿using EDDI;
 using EddiDataDefinitions;
 using EddiSpeechService;
 using System;
@@ -17,16 +17,16 @@ namespace EddiShipMonitor
     /// </summary>
     public partial class ConfigurationWindow : UserControl
     {
-        ShipMonitor monitor;
+        private readonly ShipMonitor _monitor;
 
         public ConfigurationWindow()
         {
             InitializeComponent();
-            monitor = ((ShipMonitor)EDDI.Instance.ObtainMonitor("Ship monitor"));
-            shipData.ItemsSource = monitor.shipyard;
+            _monitor = ((ShipMonitor)EDDI.Core.Eddi.Instance.ObtainMonitor("Ship monitor"));
+            shipData.ItemsSource = _monitor.shipyard;
 
             EDDIConfiguration eddiConfiguration = EDDIConfiguration.FromFile();
-            string exporttarget = eddiConfiguration.exporttarget;
+            string exporttarget = eddiConfiguration.ExportTarget;
             Logging.Debug("Export target from configuration: " + exporttarget);
             exportComboBox.Text = exporttarget == null ? "Coriolis" : exporttarget;
         }
@@ -37,7 +37,7 @@ namespace EddiShipMonitor
             Logging.Debug("Export target: " + exporttarget);
 
             EDDIConfiguration eddiConfiguration = EDDIConfiguration.FromFile();
-            eddiConfiguration.exporttarget = string.IsNullOrWhiteSpace(exporttarget) ? null : exporttarget.Trim();
+            eddiConfiguration.ExportTarget = string.IsNullOrWhiteSpace(exporttarget) ? null : exporttarget.Trim();
             eddiConfiguration.ToFile();
         }
 
@@ -70,12 +70,12 @@ namespace EddiShipMonitor
             string uri = ship.CoriolisUri();
 
             // Support EDShipyard as well.
-            if (eddiConfiguration.exporttarget == "EDShipyard")
+            if (eddiConfiguration.ExportTarget == "EDShipyard")
             {
                 uri = ship.EDShipyardUri();
             }
 
-            Logging.Debug("Export target is " + eddiConfiguration.exporttarget + ", URI is " + uri);
+            Logging.Debug("Export target is " + eddiConfiguration.ExportTarget + ", URI is " + uri);
 
             // URI can be very long so we can't use a simple Process.Start(), as that fails
             try
@@ -109,13 +109,13 @@ namespace EddiShipMonitor
         private void shipsUpdated(object sender, DataTransferEventArgs e)
         {
             // Update the ship monitor's information
-            monitor.Save();
+            _monitor.Save();
         }
 
         private void shipsUpdated(object sender, SelectionChangedEventArgs e)
         {
             // Update the ship monitor's information
-            monitor.Save();
+            _monitor.Save();
         }
     }
 

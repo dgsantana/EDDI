@@ -18,7 +18,7 @@ namespace EddiSpeechResponder
         public bool SubtitlesOnly { get; set; }
 
         [JsonIgnore]
-        private string dataPath;
+        private string _dataPath;
 
         /// <summary>
         /// Obtain configuration from a file.  If the file name is not supplied the the default
@@ -57,7 +57,7 @@ namespace EddiSpeechResponder
                 configuration.Personality = "EDDI";
                 configuration.ToFile();
             }
-            configuration.dataPath = filename;
+            configuration._dataPath = filename;
 
             return configuration;
         }
@@ -71,7 +71,7 @@ namespace EddiSpeechResponder
         {
             if (filename == null)
             {
-                filename = dataPath;
+                filename = _dataPath;
             }
             if (filename == null)
             {

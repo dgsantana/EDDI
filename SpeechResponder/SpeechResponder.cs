@@ -4,52 +4,44 @@ using EddiSpeechService;
 using Utilities;
 using Newtonsoft.Json;
 using EddiEvents;
-using Eddi;
+using EDDI;
 using System.Windows.Controls;
 using System;
 using System.Text.RegularExpressions;
 using System.IO;
 using EddiDataDefinitions;
 using EddiShipMonitor;
+using EDDI.Core;
 
 namespace EddiSpeechResponder
 {
     /// <summary>
     /// A responder that responds to events with a speech
     /// </summary>
-    public class SpeechResponder : EDDIResponder
+    public class SpeechResponder : IEDDIResponder
     {
         // The file to log speech
         public static readonly string LogFile = Constants.DATA_DIR + @"\speechresponder.out";
 
-        private ScriptResolver scriptResolver;
+        private ScriptResolver _scriptResolver;
 
-        private bool subtitles;
+        private bool _subtitles;
 
-        private bool subtitlesOnly;
+        private bool _subtitlesOnly;
 
-        private int beaconScanCount = 0;
+        private int _beaconScanCount = 0;
 
-        public string ResponderName()
-        {
-            return "Speech responder";
-        }
+        public string ResponderName => "Speech responder";
 
-        public string ResponderVersion()
-        {
-            return "1.0.0";
-        }
+        public string ResponderVersion => "1.0.0";
 
-        public string ResponderDescription()
-        {
-            return "Respond to events with scripted speech based on the information in the event. Not all events have scripted responses. If a script response is empty, its 'Test' and 'View' buttons are disabled.";
-        }
+        public string ResponderDescription => "Respond to events with scripted speech based on the information in the event. Not all events have scripted responses. If a script response is empty, its 'Test' and 'View' buttons are disabled.";
 
         public SpeechResponder()
         {
-            SpeechResponderConfiguration configuration = SpeechResponderConfiguration.FromFile();
+            var configuration = SpeechResponderConfiguration.FromFile();
             Personality personality = null;
-            if (configuration != null && configuration.Personality != null)
+            if (configuration?.Personality != null)
             {
                 personality = Personality.FromName(configuration.Personality);
             }
@@ -57,10 +49,10 @@ namespace EddiSpeechResponder
             { 
                 personality = Personality.Default();
             }
-            scriptResolver = new ScriptResolver(personality.Scripts);
-            subtitles = configuration.Subtitles;
-            subtitlesOnly = configuration.SubtitlesOnly;
-            Logging.Info("Initialised " + ResponderName() + " " + ResponderVersion());
+            _scriptResolver = new ScriptResolver(personality.Scripts);
+            _subtitles = configuration.Subtitles;
+            _subtitlesOnly = configuration.SubtitlesOnly;
+            Logging.Info("Initialised " + ResponderName + " " + ResponderVersion);
         }
 
         /// <summary>
@@ -83,15 +75,13 @@ namespace EddiSpeechResponder
                 // Yes it does; use it
                 configuration.Personality = newPersonality;
                 configuration.ToFile();
-                scriptResolver = new ScriptResolver(personality.Scripts);
+                _scriptResolver = new ScriptResolver(personality.Scripts);
                 Logging.Debug("Changed personality to " + newPersonality);
                 return true;
             }
-            else
-            {
-                // No it does not; ignore it
-                return false;
-            }
+
+            // No it does not; ignore it
+            return false;
         }
 
         public bool Start()
@@ -105,8 +95,8 @@ namespace EddiSpeechResponder
 
         public void Reload()
         {
-            SpeechResponderConfiguration configuration = SpeechResponderConfiguration.FromFile();
-            Personality personality = Personality.FromName(configuration.Personality);
+            var configuration = SpeechResponderConfiguration.FromFile();
+            var personality = Personality.FromName(configuration.Personality);
             if (personality == null)
             {
                 Logging.Warn("Failed to find named personality; falling back to default");
@@ -114,10 +104,10 @@ namespace EddiSpeechResponder
                 configuration.Personality = personality.Name;
                 configuration.ToFile();
             }
-            scriptResolver = new ScriptResolver(personality.Scripts);
-            subtitles = configuration.Subtitles;
-            subtitlesOnly = configuration.SubtitlesOnly;
-            Logging.Debug("Reloaded " + ResponderName() + " " + ResponderVersion());
+            _scriptResolver = new ScriptResolver(personality.Scripts);
+            _subtitles = configuration.Subtitles;
+            _subtitlesOnly = configuration.SubtitlesOnly;
+            Logging.Debug($"Reloaded {ResponderName} {ResponderVersion}");
         }
 
         public void Handle(Event theEvent)
@@ -125,136 +115,119 @@ namespace EddiSpeechResponder
             Logging.Debug("Received event " + JsonConvert.SerializeObject(theEvent));
 
             // By default we say things unless we've been told not to
-            bool sayOutLoud = true;
-            object tmp;
-            if (EDDI.Instance.State.TryGetValue("speechresponder_quiet", out tmp))
+            var sayOutLoud = true;
+            if (Eddi.Instance.State.TryGetValue("speechresponder_quiet", out var tmp))
             {
-                if (tmp is bool)
+                if (tmp is bool b)
                 {
-                    sayOutLoud = !(bool)tmp;
+                    sayOutLoud = !b;
                 }
             }
 
-            if (theEvent is NavBeaconScanEvent)
+            switch (theEvent)
             {
-                beaconScanCount = ((NavBeaconScanEvent)theEvent).numbodies;
-                Logging.Debug($"beaconScanCount = {beaconScanCount}");
-            }
-            else if (theEvent is StarScannedEvent || theEvent is BodyScannedEvent || theEvent is BeltScannedEvent)
-            {
-                if (beaconScanCount > 0)
-                {
-                    beaconScanCount--;
-                    Logging.Debug("beaconScanCount = " + beaconScanCount.ToString());
+                case NavBeaconScanEvent @event:
+                    _beaconScanCount = @event.numbodies;
+                    Logging.Debug($"beaconScanCount = {_beaconScanCount}");
+                    break;
+                case StarScannedEvent _:
+                case BodyScannedEvent _:
+                case BeltScannedEvent _:
+                    if (_beaconScanCount > 0)
+                    {
+                        _beaconScanCount--;
+                        Logging.Debug($"beaconScanCount = {_beaconScanCount}");
+                        return;
+                    }
+                    if (theEvent is BeltScannedEvent)
+                    {
+                        // We ignore belt clusters
+                        return;
+                    }
+
+                    break;
+                case CommunityGoalEvent _:
+                    // Disable speech from the community goal event for the time being.
                     return;
-                }
-                if (theEvent is BeltScannedEvent)
-                {
-                    // We ignore belt clusters
-                    return;
-                }
             }
 
-            // Disable speech from the community goal event for the time being.
-            if (theEvent is CommunityGoalEvent)
-            {
-                return;
-            }
 
-            Say(scriptResolver, ((ShipMonitor)EDDI.Instance.ObtainMonitor("Ship monitor")).GetCurrentShip(), theEvent.type, theEvent, null, null, null, sayOutLoud);
+            Say(_scriptResolver, ((ShipMonitor)Eddi.Instance.ObtainMonitor("Ship monitor")).GetCurrentShip(), theEvent.type, theEvent, null, null, null, sayOutLoud);
         }
 
         // Say something with the default resolver
         public void Say(Ship ship, string scriptName, Event theEvent = null, int? priority = null, string voice = null, bool? wait = null, bool sayOutLoud = true)
         {
-            Say(scriptResolver, ship, scriptName, theEvent, priority, voice, null, sayOutLoud);
+            Say(_scriptResolver, ship, scriptName, theEvent, priority, voice, null, sayOutLoud);
         }
 
         // Say something with a custom resolver
         public void Say(ScriptResolver resolver, Ship ship, string scriptName, Event theEvent = null, int? priority = null, string voice = null, bool? wait = null, bool sayOutLoud = true)
         {
-            Dictionary<string, Cottle.Value> dict = createVariables(theEvent);
-            string speech = resolver.resolve(scriptName, dict);
-            if (speech != null)
+            var dict = CreateVariables(theEvent);
+            var speech = resolver.Resolve(scriptName, dict);
+            if (speech == null) return;
+            if (_subtitles)
             {
-                if (subtitles)
-                {
-                    // Log a tidied version of the speech
-                    log(Regex.Replace(speech, "<.*?>", string.Empty));
-                }
-                if (sayOutLoud && !(subtitles && subtitlesOnly))
-                {
-                    SpeechService.Instance.Say(ship, speech, (wait == null ? true : (bool)wait), (priority == null ? resolver.priority(scriptName) : (int)priority), voice);
-                }
+                // Log a tidied version of the speech
+                Log(Regex.Replace(speech, "<.*?>", string.Empty));
+            }
+            if (sayOutLoud && !(_subtitles && _subtitlesOnly))
+            {
+                SpeechService.Instance.Say(ship, speech, wait ?? true, priority ?? resolver.Priority(scriptName), voice);
             }
         }
 
         // Create Cottle variables from the EDDI information
-        private Dictionary<string, Cottle.Value> createVariables(Event theEvent = null)
+        private static Dictionary<string, Cottle.Value> CreateVariables(Event theEvent = null)
         {
-            Dictionary<string, Cottle.Value> dict = new Dictionary<string, Cottle.Value>();
+            var dict =
+                new Dictionary<string, Cottle.Value>
+                {
+                    ["vehicle"] = Eddi.Instance.Vehicle,
+                    ["environment"] = Eddi.Instance.Environment
+                };
 
-            dict["vehicle"] = EDDI.Instance.Vehicle;
-            dict["environment"] = EDDI.Instance.Environment;
 
-            if (EDDI.Instance.Cmdr != null)
-            {
-                dict["cmdr"] = new ReflectionValue(EDDI.Instance.Cmdr);
-            }
+            if (Eddi.Instance.Cmdr != null)
+                dict["cmdr"] = new ReflectionValue(Eddi.Instance.Cmdr);
 
-            if (EDDI.Instance.HomeStarSystem != null)
-            {
-                dict["homesystem"] = new ReflectionValue(EDDI.Instance.HomeStarSystem);
-            }
+            if (Eddi.Instance.HomeStarSystem != null)
+                dict["homesystem"] = new ReflectionValue(Eddi.Instance.HomeStarSystem);
 
-            if (EDDI.Instance.HomeStation != null)
-            {
-                dict["homestation"] = new ReflectionValue(EDDI.Instance.HomeStation);
-            }
+            if (Eddi.Instance.HomeStation != null)
+                dict["homestation"] = new ReflectionValue(Eddi.Instance.HomeStation);
 
-            if (EDDI.Instance.CurrentStarSystem != null)
-            {
-                dict["system"] = new ReflectionValue(EDDI.Instance.CurrentStarSystem);
-            }
+            if (Eddi.Instance.CurrentStarSystem != null)
+                dict["system"] = new ReflectionValue(Eddi.Instance.CurrentStarSystem);
 
-            if (EDDI.Instance.LastStarSystem != null)
-            {
-                dict["lastsystem"] = new ReflectionValue(EDDI.Instance.LastStarSystem);
-            }
+            if (Eddi.Instance.LastStarSystem != null)
+                dict["lastsystem"] = new ReflectionValue(Eddi.Instance.LastStarSystem);
 
-            if (EDDI.Instance.CurrentStation != null)
-            {
-                dict["station"] = new ReflectionValue(EDDI.Instance.CurrentStation);
-            }
+            if (Eddi.Instance.CurrentStation != null)
+                dict["station"] = new ReflectionValue(Eddi.Instance.CurrentStation);
 
             if (theEvent != null)
-            {
                 dict["event"] = new ReflectionValue(theEvent);
-            }
 
-            if (EDDI.Instance.State != null)
+            if (Eddi.Instance.State != null)
             {
-                dict["state"] = ScriptResolver.buildState();
-                Logging.Debug("State is " + JsonConvert.SerializeObject(EDDI.Instance.State));
+                dict["state"] = ScriptResolver.BuildState();
+                Logging.Debug("State is " + JsonConvert.SerializeObject(Eddi.Instance.State));
             }
 
             // Obtain additional variables from each monitor
-            foreach (EDDIMonitor monitor in EDDI.Instance.monitors)
+            foreach (var monitor in Eddi.Instance.Monitors)
             {
-                IDictionary<string, object> monitorVariables = monitor.GetVariables();
-                if (monitorVariables != null)
+                var monitorVariables = monitor.GetVariables();
+                if (monitorVariables == null) continue;
+
+                foreach (var key in monitorVariables.Keys)
                 {
-                    foreach (string key in monitorVariables.Keys)
-                    {
-                        if (monitorVariables[key] == null)
-                        {
-                            dict.Remove(key);
-                        }
-                        else
-                        {
-                            dict[key] = new ReflectionValue(monitorVariables[key]);
-                        }
-                    }
+                    if (monitorVariables[key] == null)
+                        dict.Remove(key);
+                    else
+                        dict[key] = new ReflectionValue(monitorVariables[key]);
                 }
             }
 
@@ -266,14 +239,14 @@ namespace EddiSpeechResponder
             return new ConfigurationWindow();
         }
 
-        private static readonly object logLock = new object();
-        private static void log(string speech)
+        private static readonly object LogLock = new object();
+        private static void Log(string speech)
         {
-            lock (logLock)
+            lock (LogLock)
             {
                 try
                 {
-                    using (StreamWriter file = new StreamWriter(LogFile, true))
+                    using (var file = new StreamWriter(LogFile, true))
                     {
                         file.WriteLine(speech);
                     }

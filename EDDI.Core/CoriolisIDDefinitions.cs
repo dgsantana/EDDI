@@ -1,11 +1,11 @@
 ﻿using System.Collections.Generic;
 using Utilities;
 
-namespace Eddi
+namespace EDDI.Core
 {
     public class CoriolisIDDefinitions
     {
-        private static Dictionary<long, string> CoriolisIDs = new Dictionary<long, string>
+        private static readonly Dictionary<long, string> CoriolisIDs = new Dictionary<long, string>
         {
             { 100, "kp"},
             { 738, "b0"},
@@ -848,13 +848,11 @@ namespace Eddi
         };
         public static string FromEDDBID(long eddbid)
         {
-            string CoriolisID;
-            if (!CoriolisIDs.TryGetValue(eddbid, out CoriolisID))
-            {
-                Logging.Error("Missing Coriolis ID for EDDB ID " + eddbid);
-                CoriolisID = "-";
-            }
-            return CoriolisID;
+            if (CoriolisIDs.TryGetValue(eddbid, out var coriolisID)) return coriolisID;
+
+            Logging.Error("Missing Coriolis ID for EDDB ID " + eddbid);
+            coriolisID = "-";
+            return coriolisID;
         }
     }
 }

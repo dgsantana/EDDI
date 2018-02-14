@@ -1,37 +1,42 @@
-﻿using Eddi;
+﻿using EDDI;
 using EddiDataDefinitions;
 using EddiEvents;
 using EddiShipMonitor;
 using EddiStarMapService;
 using System.Collections.Generic;
 using System.Windows.Controls;
+using EDDI.Core;
 using Utilities;
 
 namespace EddiEdsmResponder
 {
-    public class EDSMResponder : EDDIResponder
+    public class EDSMResponder : IEDDIResponder
     {
         private StarMapService starMapService;
         private string system;
 
-        public string ResponderName()
+        public string ResponderName
         {
-            return "EDSM responder";
+            get { return "EDSM responder"; }
         }
 
-        public string ResponderVersion()
+        public string ResponderVersion
         {
-            return "1.0.0";
+            get { return "1.0.0"; }
         }
 
-        public string ResponderDescription()
+        public string ResponderDescription
         {
-            return "Send details of your travels to EDSM.  EDSM is a third-party tool that provides information on the locations of star systems and keeps a log of the star systems you have visited.  It uses the data provided to crowd-source a map of the galaxy";
+            get
+            {
+                return
+                    "Send details of your travels to EDSM.  EDSM is a third-party tool that provides information on the locations of star systems and keeps a log of the star systems you have visited.  It uses the data provided to crowd-source a map of the galaxy";
+            }
         }
 
         public EDSMResponder()
         {
-            Logging.Info("Initialised " + ResponderName() + " " + ResponderVersion());
+            Logging.Info("Initialised " + ResponderName + " " + ResponderVersion);
         }
 
         public bool Start()
@@ -57,9 +62,9 @@ namespace EddiEdsmResponder
                 {
                     commanderName = starMapCredentials.commanderName;
                 }
-                else if (EDDI.Instance.Cmdr != null)
+                else if (EDDI.Core.Eddi.Instance.Cmdr != null)
                 {
-                    commanderName = EDDI.Instance.Cmdr.name;
+                    commanderName = EDDI.Core.Eddi.Instance.Cmdr.name;
                 }
                 if (commanderName != null)
                 {
@@ -70,19 +75,19 @@ namespace EddiEdsmResponder
 
         public void Handle(Event theEvent)
         {
-            if (EDDI.Instance.inCQC)
+            if (EDDI.Core.Eddi.Instance.InCqc)
             {
                 // We don't do anything whilst in CQC
                 return;
             }
 
-            if (EDDI.Instance.inCrew)
+            if (EDDI.Core.Eddi.Instance.InCrew)
             {
                 // We don't do anything whilst in multicrew
                 return;
             }
 
-            if (EDDI.Instance.inBeta)
+            if (EDDI.Core.Eddi.Instance.InBeta)
             {
                 // We don't send data whilst in beta
                 return;
@@ -129,7 +134,7 @@ namespace EddiEdsmResponder
                 else if (theEvent is ShipLoadoutEvent)
                 {
                     ShipLoadoutEvent shipLoadoutEvent = (ShipLoadoutEvent)theEvent;
-                    Ship ship = ((ShipMonitor)EDDI.Instance.ObtainMonitor("Ship monitor")).GetShip(shipLoadoutEvent.shipid);
+                    Ship ship = ((ShipMonitor)EDDI.Core.Eddi.Instance.ObtainMonitor("Ship monitor")).GetShip(shipLoadoutEvent.shipid);
                     starMapService.sendShip(ship);
                 }
                 else if (theEvent is ShipSwappedEvent)
@@ -159,14 +164,14 @@ namespace EddiEdsmResponder
                 else if (theEvent is CommanderProgressEvent)
                 {
                     CommanderProgressEvent progressEvent = (CommanderProgressEvent)theEvent;
-                    if (EDDI.Instance.Cmdr != null && EDDI.Instance.Cmdr.federationrating != null)
+                    if (EDDI.Core.Eddi.Instance.Cmdr != null && EDDI.Core.Eddi.Instance.Cmdr.federationrating != null)
                     {
-                        starMapService.sendRanks(EDDI.Instance.Cmdr.combatrating.rank, (int)progressEvent.combat,
-                            EDDI.Instance.Cmdr.traderating.rank, (int)progressEvent.trade,
-                            EDDI.Instance.Cmdr.explorationrating.rank, (int)progressEvent.exploration,
-                            EDDI.Instance.Cmdr.cqcrating.rank, (int)progressEvent.cqc,
-                            EDDI.Instance.Cmdr.federationrating.rank, (int)progressEvent.federation,
-                            EDDI.Instance.Cmdr.empirerating.rank, (int)progressEvent.empire);
+                        starMapService.sendRanks(EDDI.Core.Eddi.Instance.Cmdr.combatrating.rank, (int)progressEvent.combat,
+                            EDDI.Core.Eddi.Instance.Cmdr.traderating.rank, (int)progressEvent.trade,
+                            EDDI.Core.Eddi.Instance.Cmdr.explorationrating.rank, (int)progressEvent.exploration,
+                            EDDI.Core.Eddi.Instance.Cmdr.cqcrating.rank, (int)progressEvent.cqc,
+                            EDDI.Core.Eddi.Instance.Cmdr.federationrating.rank, (int)progressEvent.federation,
+                            EDDI.Core.Eddi.Instance.Cmdr.empirerating.rank, (int)progressEvent.empire);
                     }
                 }
             }

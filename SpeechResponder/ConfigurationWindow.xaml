@@ -15,11 +15,11 @@
             <StackPanel Orientation="Vertical" Grid.Column="0" DockPanel.Dock="Top" >
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Top">
                     <TextBlock Margin="0, 0, 0, 5" TextWrapping="Wrap" Text="Write text copies of speech to the file %APPDATA%\EDDI\speechresponder.out"></TextBlock>
-                    <CheckBox x:Name="subtitlesCheckbox" VerticalAlignment="Center" Margin="5, 0" Checked="subtitlesEnabled" Unchecked="subtitlesDisabled"/>
+                    <CheckBox x:Name="subtitlesCheckbox" VerticalAlignment="Center" Margin="5, 0" Checked="SubtitlesEnabled" Unchecked="SubtitlesDisabled"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Top" >
                     <TextBlock Margin="0,5" TextWrapping="Wrap" Text="Do not speak out loud when text is written to the file as above"></TextBlock>
-                    <CheckBox x:Name="subtitlesOnlyCheckbox" Margin="5, 0" VerticalAlignment="Center" Checked="subtitlesOnlyEnabled" Unchecked="subtitlesOnlyDisabled"/>
+                    <CheckBox x:Name="subtitlesOnlyCheckbox" Margin="5, 0" VerticalAlignment="Center" Checked="SubtitlesOnlyEnabled" Unchecked="SubtitlesOnlyDisabled"/>
                 </StackPanel>
 
             </StackPanel>
@@ -27,13 +27,13 @@
         </Grid>
         <StackPanel Orientation="Horizontal" DockPanel.Dock="Top" Margin="5, 0">
             <TextBlock VerticalAlignment="Center" Text="Active personality"></TextBlock>
-            <ComboBox Margin="5,0" ItemsSource="{Binding Personalities}" SelectedValue="{Binding Personality, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" DisplayMemberPath="Name" SelectionChanged="personalityChanged" />
+            <ComboBox Margin="5,0" ItemsSource="{Binding Personalities}" SelectedValue="{Binding Personality, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" DisplayMemberPath="Name" SelectionChanged="PersonalityChanged" />
             <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" VerticalAlignment="Center" Text="{Binding Personality.Description}"/>
         </StackPanel>
         <UniformGrid DockPanel.Dock="Bottom" Rows="1" Margin="0,5">
-            <Button Margin="10" HorizontalAlignment="Center" Click="newScriptClicked" IsEnabled="{Binding Path=Personality.IsEditable}">Create new script</Button>
-            <Button Margin="10" HorizontalAlignment="Center" Click="copyPersonalityClicked" >Copy personality</Button>
-            <Button Margin="10" HorizontalAlignment="Center" Click="deletePersonalityClicked" IsEnabled="{Binding Path=Personality.IsEditable}">Delete personality</Button>
+            <Button Margin="10" HorizontalAlignment="Center" Click="NewScriptClicked" IsEnabled="{Binding Path=Personality.IsEditable}">Create new script</Button>
+            <Button Margin="10" HorizontalAlignment="Center" Click="CopyPersonalityClicked" >Copy personality</Button>
+            <Button Margin="10" HorizontalAlignment="Center" Click="DeletePersonalityClicked" IsEnabled="{Binding Path=Personality.IsEditable}">Delete personality</Button>
         </UniformGrid>
         <DataGrid Margin="0,5" IsReadOnly="True" AutoGenerateColumns="False" x:Name="scriptsData" CanUserAddRows="false" ItemsSource="{Binding Personality.Scripts}">
             <DataGrid.Columns>
@@ -42,7 +42,7 @@
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <Border IsEnabled="{Binding Path=Value.Responder}">
-                                <CheckBox HorizontalAlignment="Center" VerticalAlignment="Center" IsChecked="{Binding Path=Value.Enabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type UserControl}}, Path=Personality.IsEditable}" Checked="eddiScriptsUpdated" Unchecked="eddiScriptsUpdated" />
+                                <CheckBox HorizontalAlignment="Center" VerticalAlignment="Center" IsChecked="{Binding Path=Value.Enabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" IsEnabled="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type UserControl}}, Path=Personality.IsEditable}" Checked="EddiScriptsUpdated" Unchecked="EddiScriptsUpdated" />
                             </Border>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
@@ -51,21 +51,21 @@
                 <DataGridTemplateColumn>
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                            <Button IsEnabled="{Binding Path=Value.HasValue}" Click="testScript">Test</Button>
+                            <Button IsEnabled="{Binding Path=Value.HasValue}" Click="TestScript">Test</Button>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
                 <DataGridTemplateColumn>
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                            <Button IsEnabled="{Binding Path=Value.HasValue}" Click="viewScript">View</Button>
+                            <Button IsEnabled="{Binding Path=Value.HasValue}" Click="ViewScript">View</Button>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
                 <DataGridTemplateColumn>
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
-                            <Button IsEnabled="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type UserControl}}, Path=Personality.IsEditable}" Click="editScript">Edit</Button>
+                            <Button IsEnabled="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type UserControl}}, Path=Personality.IsEditable}" Click="EditScript">Edit</Button>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>
                 </DataGridTemplateColumn>
@@ -73,7 +73,7 @@
                     <DataGridTemplateColumn.CellTemplate>
                         <DataTemplate>
                             <StackPanel IsEnabled="{Binding Path=Value.IsDeleteable}">
-                                <Button IsEnabled="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type UserControl}}, Path=Personality.IsEditable}" Click="deleteScript">Delete</Button>
+                                <Button IsEnabled="{Binding RelativeSource={RelativeSource FindAncestor, AncestorType={x:Type UserControl}}, Path=Personality.IsEditable}" Click="DeleteScript">Delete</Button>
                             </StackPanel>
                         </DataTemplate>
                     </DataGridTemplateColumn.CellTemplate>

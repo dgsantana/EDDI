@@ -21,19 +21,19 @@ namespace EddiMaterialMonitor
             VARIABLES.Add("change", "The change to the inventory (Increase/Reduction)");
         }
 
-        public Material material { get; private set; }
-        public string level { get; private set; }
-        public int limit { get; private set; }
-        public int amount { get; private set; }
-        public string change { get; private set; }
+        public Material Material { get; }
+        public string Level { get; }
+        public int Limit { get; }
+        public int Amount { get; }
+        public string Change { get; }
 
         public MaterialThresholdEvent(DateTime timestamp, Material material, string level, int limit, int amount, string change) : base(timestamp, NAME)
         {
-            this.material = material;
-            this.level = level;
-            this.limit = limit;
-            this.amount = amount;
-            this.change = change;
+            Material = material;
+            Level = level;
+            Limit = limit;
+            Amount = amount;
+            Change = change;
         }
     }
 }

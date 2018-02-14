@@ -1,4 +1,4 @@
-﻿using Eddi;
+﻿using EDDI;
 using EddiDataDefinitions;
 using EddiEvents;
 using Newtonsoft.Json;
@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Windows.Controls;
+using EDDI.Core;
 using Utilities;
 
 namespace EDDNResponder
@@ -15,7 +16,7 @@ namespace EDDNResponder
     /// <summary>
     /// A responder for EDDI to provide information to EDDN.
     /// </summary>
-    public class EDDNResponder : EDDIResponder
+    public class EDDNResponder : IEDDIResponder
     {
         // We keep a local track of the starsystem information
         private string systemName = null;
@@ -23,35 +24,39 @@ namespace EDDNResponder
         private decimal? systemY = null;
         private decimal? systemZ = null;
 
-        public string ResponderName()
+        public string ResponderName
         {
-            return "EDDN responder";
+            get { return "EDDN responder"; }
         }
 
-        public string ResponderVersion()
+        public string ResponderVersion
         {
-            return "1.0.0";
+            get { return "1.0.0"; }
         }
 
-        public string ResponderDescription()
+        public string ResponderDescription
         {
-            return "Send station, jump, and scan information to EDDN.  EDDN is a third-party tool that gathers information on systems and markets, and provides data for most trading tools as well as starsystem information tools such as EDDB";
+            get
+            {
+                return
+                    "Send station, jump, and scan information to EDDN.  EDDN is a third-party tool that gathers information on systems and markets, and provides data for most trading tools as well as starsystem information tools such as EDDB";
+            }
         }
 
         public EDDNResponder()
         {
-            Logging.Info("Initialised " + ResponderName() + " " + ResponderVersion());
+            Logging.Info("Initialised " + ResponderName + " " + ResponderVersion);
         }
 
         public void Handle(Event theEvent)
         {
-            if (EDDI.Instance.inCQC)
+            if (EDDI.Core.Eddi.Instance.InCqc)
             {
                 // We don't do anything whilst in CQC
                 return;
             }
 
-            if (EDDI.Instance.inCrew)
+            if (EDDI.Core.Eddi.Instance.InCrew)
             {
                 // We don't do anything whilst in multicrew
                 return;
@@ -115,7 +120,7 @@ namespace EDDNResponder
 
         private void handleRawEvent(Event theEvent)
         {
-            IDictionary<string, object> data = Deserializtion.DeserializeData(theEvent.raw);
+            IDictionary<string, object> data = Deserialization.DeserializeData(theEvent.raw);
             // Need to strip a number of entries
             data.Remove("CockpitBreach");
             data.Remove("BoostUsed");
@@ -156,7 +161,7 @@ namespace EDDNResponder
 
             EDDNBody body = new EDDNBody();
             body.header = generateHeader();
-            body.schemaRef = "https://eddn.edcd.io/schemas/journal/1" + (EDDI.Instance.inBeta ? "/test" : "");
+            body.schemaRef = "https://eddn.edcd.io/schemas/journal/1" + (EDDI.Core.Eddi.Instance.InBeta ? "/test" : "");
             body.message = data;
 
             sendMessage(body);
@@ -184,12 +189,12 @@ namespace EDDNResponder
             // It's possible that the commodity data, if it is here, has already come from EDDB.  We use the average price
             // as a marker: this isn't visible in EDDB, so if we have average price we know that this is data from the companion
             // API and should be reported
-            if (EDDI.Instance.CurrentStation != null && EDDI.Instance.CurrentStation.commodities != null && EDDI.Instance.CurrentStation.commodities.Count > 0 && EDDI.Instance.CurrentStation.commodities[0].avgprice != null)
+            if (EDDI.Core.Eddi.Instance.CurrentStation != null && EDDI.Core.Eddi.Instance.CurrentStation.commodities != null && EDDI.Core.Eddi.Instance.CurrentStation.commodities.Count > 0 && EDDI.Core.Eddi.Instance.CurrentStation.commodities[0].avgprice != null)
             {
                 List<EDDNEconomy> eddnEconomies = new List<EDDNEconomy>();
-                if (EDDI.Instance.CurrentStation.economies != null)
+                if (EDDI.Core.Eddi.Instance.CurrentStation.economies != null)
                 {
-                    foreach (CompanionAppEconomy economy in EDDI.Instance.CurrentStation.economies)
+                    foreach (CompanionAppEconomy economy in EDDI.Core.Eddi.Instance.CurrentStation.economies)
                     {
                         EDDNEconomy eddnEconomy = new EDDNEconomy();
                         eddnEconomy.name = economy.name;
@@ -199,7 +204,7 @@ namespace EDDNResponder
                 }
 
                 List<EDDNCommodity> eddnCommodities = new List<EDDNCommodity>();
-                foreach (Commodity commodity in EDDI.Instance.CurrentStation.commodities)
+                foreach (Commodity commodity in EDDI.Core.Eddi.Instance.CurrentStation.commodities)
                 {
                     if (commodity.category == "NonMarketable")
                     {
@@ -227,20 +232,20 @@ namespace EDDNResponder
                     IDictionary<string, object> data = new Dictionary<string, object>();
                     data.Add("timestamp", DateTime.Now.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ"));
                     data.Add("systemName", systemName);
-                    data.Add("stationName", EDDI.Instance.CurrentStation.name);
+                    data.Add("stationName", EDDI.Core.Eddi.Instance.CurrentStation.name);
                     if (eddnEconomies.Count > 0)
                     {
                         data.Add("economies", eddnEconomies);
                     }
                     data.Add("commodities", eddnCommodities);
-                    if (EDDI.Instance.CurrentStation.prohibited.Count > 0)
+                    if (EDDI.Core.Eddi.Instance.CurrentStation.prohibited.Count > 0)
                     {
-                        data.Add("prohibited", EDDI.Instance.CurrentStation.prohibited);
+                        data.Add("prohibited", EDDI.Core.Eddi.Instance.CurrentStation.prohibited);
                     }
 
                     EDDNBody body = new EDDNBody();
                     body.header = generateHeader();
-                    body.schemaRef = "https://eddn.edcd.io/schemas/commodity/3" + (EDDI.Instance.inBeta ? "/test" : "");
+                    body.schemaRef = "https://eddn.edcd.io/schemas/commodity/3" + (EDDI.Core.Eddi.Instance.InBeta ? "/test" : "");
                     body.message = data;
 
                     Logging.Debug("EDDN message is: " + JsonConvert.SerializeObject(body));
@@ -251,10 +256,10 @@ namespace EDDNResponder
 
         private void sendOutfittingInformation()
         {
-            if (EDDI.Instance.CurrentStation != null && EDDI.Instance.CurrentStation.outfitting != null)
+            if (EDDI.Core.Eddi.Instance.CurrentStation != null && EDDI.Core.Eddi.Instance.CurrentStation.outfitting != null)
             {
                 List<string> eddnModules = new List<string>();
-                foreach (Module module in EDDI.Instance.CurrentStation.outfitting)
+                foreach (Module module in EDDI.Core.Eddi.Instance.CurrentStation.outfitting)
                 {
                     if ((!ModuleDefinitions.IsPP(module))
                         && (module.EDName.StartsWith("Int_") || module.EDName.StartsWith("Hpt_") || module.EDName.Contains("_Armour_"))
@@ -269,13 +274,13 @@ namespace EDDNResponder
                 {
                     IDictionary<string, object> data = new Dictionary<string, object>();
                     data.Add("timestamp", DateTime.Now.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ"));
-                    data.Add("systemName", EDDI.Instance.CurrentStation.systemname);
-                    data.Add("stationName", EDDI.Instance.CurrentStation.name);
+                    data.Add("systemName", EDDI.Core.Eddi.Instance.CurrentStation.systemname);
+                    data.Add("stationName", EDDI.Core.Eddi.Instance.CurrentStation.name);
                     data.Add("modules", eddnModules);
 
                     EDDNBody body = new EDDNBody();
                     body.header = generateHeader();
-                    body.schemaRef = "https://eddn.edcd.io/schemas/outfitting/2" + (EDDI.Instance.inBeta ? "/test" : "");
+                    body.schemaRef = "https://eddn.edcd.io/schemas/outfitting/2" + (EDDI.Core.Eddi.Instance.InBeta ? "/test" : "");
                     body.message = data;
 
                     sendMessage(body);
@@ -285,10 +290,10 @@ namespace EDDNResponder
 
         private void sendShipyardInformation()
         {
-            if (EDDI.Instance.CurrentStation != null && EDDI.Instance.CurrentStation.shipyard != null)
+            if (EDDI.Core.Eddi.Instance.CurrentStation != null && EDDI.Core.Eddi.Instance.CurrentStation.shipyard != null)
             {
                 List<string> eddnShips = new List<string>();
-                foreach (Ship ship in EDDI.Instance.CurrentStation.shipyard)
+                foreach (Ship ship in EDDI.Core.Eddi.Instance.CurrentStation.shipyard)
                 {
                         eddnShips.Add(ship.EDName);
                 }
@@ -298,13 +303,13 @@ namespace EDDNResponder
                 {
                     IDictionary<string, object> data = new Dictionary<string, object>();
                     data.Add("timestamp", DateTime.Now.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ"));
-                    data.Add("systemName", EDDI.Instance.CurrentStation.systemname);
-                    data.Add("stationName", EDDI.Instance.CurrentStation.name);
+                    data.Add("systemName", EDDI.Core.Eddi.Instance.CurrentStation.systemname);
+                    data.Add("stationName", EDDI.Core.Eddi.Instance.CurrentStation.name);
                     data.Add("ships", eddnShips);
 
                     EDDNBody body = new EDDNBody();
                     body.header = generateHeader();
-                    body.schemaRef = "https://eddn.edcd.io/schemas/shipyard/2" + (EDDI.Instance.inBeta ? "/test" : "");
+                    body.schemaRef = "https://eddn.edcd.io/schemas/shipyard/2" + (EDDI.Core.Eddi.Instance.InBeta ? "/test" : "");
                     body.message = data;
 
                     sendMessage(body);
@@ -325,7 +330,7 @@ namespace EDDNResponder
             //    hash.Append(theByte.ToString("x2"));
             //}
             //return hash.ToString();
-            return EDDI.Instance.Cmdr == null || EDDI.Instance.Cmdr.name == null ? "Unknown commander" : EDDI.Instance.Cmdr.name;
+            return EDDI.Core.Eddi.Instance.Cmdr == null || EDDI.Core.Eddi.Instance.Cmdr.name == null ? "Unknown commander" : EDDI.Core.Eddi.Instance.Cmdr.name;
         }
 
         private static EDDNHeader generateHeader()

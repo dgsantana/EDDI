@@ -1,4 +1,4 @@
-﻿using Eddi;
+﻿using EDDI;
 using EddiDataDefinitions;
 using EddiEvents;
 using Newtonsoft.Json;
@@ -6,53 +6,36 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
+using EDDI.Core;
 using Utilities;
 
 namespace EddiCargoMonitor
 {
     /**
      * Monitor cargo for the current ship
-     * Missing: there is no event for when a drone is fired, so we cannot keep track of this individually.  Instead we have to rely
+     * Missing: there is no ev for when a drone is fired, so we cannot keep track of this individually.  Instead we have to rely
      * on the inventory events to give us information on the number of drones in-ship.
      */
-    public class CargoMonitor : EDDIMonitor
+    public class CargoMonitor : IEDDIMonitor
     {
         // Observable collection for us to handle changes
-        public ObservableCollection<Cargo> inventory = new ObservableCollection<Cargo>();
+        public ObservableCollection<Cargo> Inventory = new ObservableCollection<Cargo>();
 
-        public string MonitorName()
-        {
-            return "Cargo monitor";
-        }
+        public string MonitorName => "Cargo monitor";
 
-        public string MonitorVersion()
-        {
-            return "1.0.0";
-        }
+        public string MonitorVersion => "1.0.0";
 
-        public string MonitorDescription()
-        {
-            return "Track information on your cargo.";
-        }
+        public string MonitorDescription => "Track information on your cargo.";
 
-        public bool IsRequired()
-        {
-            return true;
-        }
+        public bool IsRequired => true;
 
-        public CargoMonitor()
-        {
-            Logging.Info("Initialised " + MonitorName() + " " + MonitorVersion());
-        }
+        public CargoMonitor() => Logging.Info($"Initialised {MonitorName} {MonitorVersion}");
 
-        public bool NeedsStart()
-        {
-            // We don't actively do anything, just listen to events
-            return false;
-        }
+        public bool NeedsStart => false;
 
         public void Start()
         {
@@ -75,157 +58,128 @@ namespace EddiCargoMonitor
         {
         }
 
-        public void PostHandle(Event @event)
+        public void PostHandle(Event ev)
         {
         }
 
-        public void PreHandle(Event @event)
+        public void PreHandle(Event ev)
         {
-            Logging.Debug("Received event " + JsonConvert.SerializeObject(@event));
+            Logging.Debug("Received ev " + JsonConvert.SerializeObject(ev));
 
             // Handle the events that we care about
-            if (@event is CargoInventoryEvent)
+            switch (ev)
             {
-                handleCargoInventoryEvent((CargoInventoryEvent)@event);
+                case CargoInventoryEvent _:
+                    HandleCargoInventoryEvent((CargoInventoryEvent)ev);
+                    break;
+                case CommodityCollectedEvent _:
+                    break;
+                case CommodityEjectedEvent _:
+                    break;
+                case CommodityPurchasedEvent _:
+                    break;
+                case CommodityRefinedEvent _:
+                    break;
+                case CommoditySoldEvent _:
+                    break;
+                case PowerCommodityObtainedEvent _:
+                    break;
+                case PowerCommodityDeliveredEvent _:
+                    break;
+                case LimpetPurchasedEvent _:
+                    break;
+                case LimpetSoldEvent _:
+                    break;
+                case MissionAbandonedEvent _:
+                    // If we abandon a mission with cargo it becomes stolen
+                    break;
+                case MissionAcceptedEvent _:
+                    // Check to see if this is a cargo mission and update our inventory accordingly
+                    break;
+                case MissionCompletedEvent _:
+                    // Check to see if this is a cargo mission and update our inventory accordingly
+                    break;
+                case MissionFailedEvent _:
+                    // If we fail a mission with cargo it becomes stolen
+                    break;
             }
-            else if (@event is CommodityCollectedEvent)
-            {
 
-            }
-            else if (@event is CommodityEjectedEvent)
-            {
-
-            }
-            else if (@event is CommodityPurchasedEvent)
-            {
-
-            }
-            else if (@event is CommodityRefinedEvent)
-            {
-
-            }
-            else if (@event is CommoditySoldEvent)
-            {
-
-            }
-            else if (@event is PowerCommodityObtainedEvent)
-            {
-
-            }
-            else if (@event is PowerCommodityDeliveredEvent)
-            {
-
-            }
-            else if (@event is LimpetPurchasedEvent)
-            {
-
-            }
-            else if (@event is LimpetSoldEvent)
-            {
-
-            }
-            else if (@event is MissionAbandonedEvent)
-            {
-                // If we abandon a mission with cargo it becomes stolen
-            }
-            else if (@event is MissionAcceptedEvent)
-            {
-                // Check to see if this is a cargo mission and update our inventory accordingly
-            }
-            else if (@event is MissionCompletedEvent)
-            {
-                // Check to see if this is a cargo mission and update our inventory accordingly
-            }
-            else if (@event is MissionFailedEvent)
-            {
-                // If we fail a mission with cargo it becomes stolen
-            }
             // TODO Powerplay events
         }
 
-        private void handleCargoInventoryEvent(CargoInventoryEvent @event)
+        private void HandleCargoInventoryEvent(CargoInventoryEvent ev)
         {
-            //// CargoInventoryEvent does not contain stolen, missionid, or cost information so merge it here
-            //foreach (Cargo cargo in @event.inventory)
-            //{
-            //    bool added = false;
-            //    foreach (Cargo inventoryCargo in inventory)
-            //    {
-            //        if (inventoryCargo.commodity == cargo.commodity)
-            //        {
-            //            // Match of commodity
-            //            added = true;
-            //        }
-            //    }
-            //    if (!added)
-            //    {
-            //        // We haven't heard of this cargo so add it to the inventory directly
-            //        AddCargo(cargo);
-            //    }
-            //}
-            //inventory.Clear();
-            //foreach (Cargo cargo in @event.inventory)
-            //{
-            //    inventory.Add(cargo);
-            //}
+            // CargoInventoryEvent does not contain stolen, missionid, or cost information so merge it here
+            foreach (var cargo in ev.inventory)
+            {
+                var added = Inventory.Any(x => x.commodity == cargo.commodity);
+                if (!added)
+                    AddCargo(cargo);
+            }
+
+            Inventory.Clear();
+            foreach (var cargo in ev.inventory)
+            {
+                Inventory.Add(cargo);
+            }
         }
 
         public IDictionary<string, object> GetVariables()
         {
-            IDictionary<string, object> variables = new Dictionary<string, object>
+            var variables = new Dictionary<string, object>
             {
-                ["cargo"] = new List<Cargo>(inventory)
+                ["cargo"] = new List<Cargo>(Inventory)
             };
             return variables;
+        }
+
+        private static void CheckApplication()
+        {
+            if (Application.Current == null)
+            {
+                new Application();
+            }
         }
 
         public void AddCargo(Cargo cargo)
         {
             // If we were started from VoiceAttack then we might not have an application; check here and create if it doesn't exist
-            if (Application.Current == null)
-            {
-                new Application();
-            }
+            CheckApplication();
 
             // Run this on the dispatcher to ensure that we can update it whilst reflecting changes in the UI
-            if (Application.Current.Dispatcher.CheckAccess())
+            if (Application.Current != null && Application.Current.Dispatcher.CheckAccess())
             {
-                addCargo(cargo);
+                AddCargoInternal(cargo);
             }
             else
             {
-                Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
-                {
-                    addCargo(cargo);
-                }));
+                if (Application.Current != null)
+                    Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal,
+                        new Action(() => { AddCargoInternal(cargo); }));
             }
         }
 
         public void RemoveCargo(Cargo cargo)
         {
-            // If we were started from VoiceAttack then we might not have an application; check here and create if it doesn't exist
-            if (Application.Current == null)
-            {
-                new Application();
-            }
+            CheckApplication();
 
             // Run this on the dispatcher to ensure that we can update it whilst reflecting changes in the UI
             if (Application.Current.Dispatcher.CheckAccess())
             {
-                removeCargo(cargo);
+                RemoveCargoInternal(cargo);
             }
             else
             {
                 Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
                 {
-                    removeCargo(cargo);
+                    RemoveCargoInternal(cargo);
                 }));
             }
         }
 
-        private void addCargo(Cargo cargo)
+        private void AddCargoInternal(Cargo cargo)
         {
-            foreach (Cargo inventoryCargo in inventory)
+            foreach (Cargo inventoryCargo in Inventory)
             {
                 if (inventoryCargo.commodity == cargo.commodity)
                 {
@@ -256,14 +210,14 @@ namespace EddiCargoMonitor
                 }
             }
             // No matching cargo - add entry
-            inventory.Add(cargo);
+            Inventory.Add(cargo);
         }
 
-        private void removeCargo(Cargo cargo)
+        private void RemoveCargoInternal(Cargo cargo)
         {
-            for (int i = 0; i < inventory.Count; i++)
+            for (int i = 0; i < Inventory.Count; i++)
             {
-                Cargo inventoryCargo = inventory[i];
+                Cargo inventoryCargo = Inventory[i];
                 if (inventoryCargo.commodity == cargo.commodity)
                 {
                     // Matching commodity; see if the details match
@@ -275,7 +229,7 @@ namespace EddiCargoMonitor
                             // Both for the same mission - remove from this
                             if (inventoryCargo.amount == cargo.amount)
                             {
-                                inventory.RemoveAt(i);
+                                Inventory.RemoveAt(i);
                                 return;
                             }
                             else
@@ -296,7 +250,7 @@ namespace EddiCargoMonitor
                             // Same cost basis - remove from this
                             if (inventoryCargo.amount == cargo.amount)
                             {
-                                inventory.RemoveAt(i);
+                                Inventory.RemoveAt(i);
                                 return;
                             }
                             else
@@ -309,7 +263,7 @@ namespace EddiCargoMonitor
                 }
             }
             // No matching cargo - ignore
-            Logging.Debug("Did not find match for cargo " + JsonConvert.SerializeObject(cargo));
+            Logging.Debug($"Did not find match for cargo {JsonConvert.SerializeObject(cargo)}");
         }
     }
 }

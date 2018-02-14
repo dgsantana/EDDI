@@ -1,4 +1,4 @@
-﻿<Window x:Class="Eddi.MainWindow"
+﻿<Window x:Class="EDDI.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
@@ -32,10 +32,10 @@
                                 The first group obtain and manage the basic information used by EDDI.  These are the 'Commander Details', 'Frontier API' and 'Text-to-Speech' tabs.  You should go through each of these and configure them so that EDDI has full access to your Elite: Dangerous information.
                             </Paragraph>
                             <Paragraph>
-                                The second group obtain event information.  These are the tabs that end in 'monitor'.  They obtain events from different places, and require minimal configuration but need to be completed before they will work.
+                                The second group obtain ev information.  These are the tabs that end in 'monitor'.  They obtain evs from different places, and require minimal configuration but need to be completed before they will work.
                             </Paragraph>
                             <Paragraph>
-                                The third group respond to events.  These are the tabs that end in 'responder'.  These come with varying degrees of configuration, but will work out of the box.
+                                The third group respond to evs.  These are the tabs that end in 'responder'.  These come with varying degrees of configuration, but will work out of the box.
                             </Paragraph>
                             <Paragraph>
                                 You can read more about how EDDI functions on the

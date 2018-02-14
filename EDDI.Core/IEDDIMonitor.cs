@@ -1,39 +1,39 @@
-﻿using System.Windows.Controls;
+﻿using System.Collections.Generic;
+using System.Windows.Controls;
 using EddiEvents;
-using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 
-namespace Eddi
+namespace EDDI.Core
 {
     /// <summary>
     /// The methods required for an EDDI monitor.
     /// </summary>
-    public interface EDDIMonitor
+    public interface IEDDIMonitor
     {
         /// <summary>
         /// A short name for the monitor
         /// </summary>
-        string MonitorName();
+        string MonitorName { get; }
 
         /// <summary>
         /// The version of the monitor
         /// </summary>
-        string MonitorVersion();
+        string MonitorVersion { get; }
 
         /// <summary>
         /// A brief description of the monitor
         /// </summary>
-        string MonitorDescription();
+        string MonitorDescription { get; }
 
         /// <summary>
         /// If the monitor is required to be running
         /// </summary>
-        bool IsRequired();
+        bool IsRequired { get; }
 
         /// <summary>
         /// If the monitor needs to be explicitly started/stopped
         /// </summary>
-        bool NeedsStart();
+        bool NeedsStart { get; }
 
         /// <summary>
         /// Called when this monitor is started.  This is not expected to return whilst the monitor is running
@@ -53,12 +53,12 @@ namespace Eddi
         /// <summary>
         /// Called prior to responders running.  This should be used to update state
         /// </summary>
-        void PreHandle(Event @event);
+        void PreHandle(Event ev);
 
         /// <summary>
         /// Called after responders running.  This should be used to generate follow-on events
         /// </summary>
-        void PostHandle(Event @event);
+        void PostHandle(Event ev);
 
         /// <summary>
         /// Called to receive information from the Frontier API

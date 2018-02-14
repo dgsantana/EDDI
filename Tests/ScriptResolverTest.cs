@@ -90,7 +90,7 @@ namespace Tests
             ScriptResolver resolver = new ScriptResolver(scripts);
             Dictionary<string, Cottle.Value> dict = new Dictionary<string, Cottle.Value>();
             dict["name"] = "world";
-            string result = resolver.resolve("test", dict);
+            string result = resolver.Resolve("test", dict);
             Assert.AreEqual("Hello world", result);
         }
 
@@ -103,7 +103,7 @@ namespace Tests
             ScriptResolver resolver = new ScriptResolver(scripts);
             Dictionary<string, Cottle.Value> dict = new Dictionary<string, Cottle.Value>();
             dict["name"] = "world";
-            string result = resolver.resolve("test", dict);
+            string result = resolver.Resolve("test", dict);
             Assert.AreEqual("Well Hello world", result);
         }
 

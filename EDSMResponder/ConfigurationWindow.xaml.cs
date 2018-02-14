@@ -1,4 +1,4 @@
-﻿using Eddi;
+﻿using EDDI;
 using EddiDataDefinitions;
 using EddiDataProviderService;
 using EddiStarMapService;
@@ -51,7 +51,7 @@ namespace EddiEdsmResponder
                 edsmConfiguration.commanderName = edsmCommanderNameTextBox.Text.Trim();
             }
             edsmConfiguration.ToFile();
-            EDDI.Instance.Reload("EDSM responder");
+            EDDI.Core.Eddi.Instance.Reload("EDSM responder");
         }
 
         /// <summary>
@@ -72,7 +72,7 @@ namespace EddiEdsmResponder
             if (string.IsNullOrEmpty(starMapConfiguration.commanderName))
             {
                 // Fetch the commander name from the companion app
-                Commander cmdr = EDDI.Instance.Cmdr;
+                Commander cmdr = EDDI.Core.Eddi.Instance.Cmdr;
                 if (cmdr != null && cmdr.name != null)
                 {
                     commanderName = cmdr.name;

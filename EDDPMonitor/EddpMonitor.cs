@@ -1,4 +1,4 @@
-﻿using Eddi;
+﻿using EDDI;
 using EddiDataDefinitions;
 using EddiDataProviderService;
 using EddiEvents;
@@ -8,6 +8,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using EDDI.Core;
 using Utilities;
 
 namespace EddiEddpMonitor
@@ -15,7 +16,7 @@ namespace EddiEddpMonitor
     /// <summary>
     /// An EDDI monitor to watch the EDDP feed for changes to the state of systems and stations
     /// </summary>
-    public class EddpMonitor : EDDIMonitor
+    public class EddpMonitor : IEDDIMonitor
     {
         private bool running = false;
         private bool reloading = false;
@@ -25,35 +26,38 @@ namespace EddiEddpMonitor
         /// <summary>
         /// The name of the monitor; shows up in EDDI's configuration window
         /// </summary>
-        public string MonitorName()
+        public string MonitorName
         {
-            return "EDDP monitor";
+            get { return "EDDP monitor"; }
         }
 
         /// <summary>
         /// The version of the monitor; shows up in EDDI's logs
         /// </summary>
-        public string MonitorVersion()
+        public string MonitorVersion
         {
-            return "1.0.0";
+            get { return "1.0.0"; }
         }
 
         /// <summary>
         /// The description of the monitor; shows up in EDDI's configuration window
         /// </summary>
-        public string MonitorDescription()
+        public string MonitorDescription
         {
-            return @"Monitor EDDP for changes in system control and state, and generate events that match the watch list.";
+            get
+            {
+                return @"Monitor EDDP for changes in system control and state, and generate events that match the watch list.";
+            }
         }
 
-        public bool IsRequired()
+        public bool IsRequired
         {
-            return false;
+            get { return false; }
         }
 
-        public bool NeedsStart()
+        public bool NeedsStart
         {
-            return true;
+            get { return true; }
         }
 
         /// <summary>
@@ -200,7 +204,7 @@ namespace EddiEddpMonitor
                     StarSystemSqLiteRepository.Instance.SaveStarSystem(system);
                 }
 
-                // Send an appropriate event
+                // Send an appropriate ev
                 Event @event = null;
                 if (newfaction != null)
                 {
@@ -212,7 +216,7 @@ namespace EddiEddpMonitor
                 }
                 if (@event != null)
                 {
-                    EDDI.Instance.eventHandler(@event);
+                    EDDI.Core.Eddi.Instance.EventHandler(@event);
                 }
             }
         }
@@ -245,15 +249,15 @@ namespace EddiEddpMonitor
                     continue;
                 }
 
-                if (EDDI.Instance.CurrentStarSystem != null)
+                if (EDDI.Core.Eddi.Instance.CurrentStarSystem != null)
                 {
 
                     if (watch.MaxDistanceFromShip != null)
                     {
                         // Calculate the distance of the system from the ship
-                        decimal distance = (decimal)Math.Sqrt(Math.Pow((double)(EDDI.Instance.CurrentStarSystem.x - x), 2)
-                                                     + Math.Pow((double)(EDDI.Instance.CurrentStarSystem.y - y), 2)
-                                                     + Math.Pow((double)(EDDI.Instance.CurrentStarSystem.z - z), 2));
+                        decimal distance = (decimal)Math.Sqrt(Math.Pow((double)(EDDI.Core.Eddi.Instance.CurrentStarSystem.x - x), 2)
+                                                     + Math.Pow((double)(EDDI.Core.Eddi.Instance.CurrentStarSystem.y - y), 2)
+                                                     + Math.Pow((double)(EDDI.Core.Eddi.Instance.CurrentStarSystem.z - z), 2));
                         if (distance > watch.MaxDistanceFromShip)
                         {
                             continue;
@@ -263,9 +267,9 @@ namespace EddiEddpMonitor
                     if (watch.MaxDistanceFromHome != null)
                     {
                         // Calculate the distance of the system from the home system
-                        decimal distance = (decimal)Math.Sqrt(Math.Pow((double)(EDDI.Instance.HomeStarSystem.x - x), 2)
-                                                     + Math.Pow((double)(EDDI.Instance.HomeStarSystem.y - y), 2)
-                                                     + Math.Pow((double)(EDDI.Instance.HomeStarSystem.z - z), 2));
+                        decimal distance = (decimal)Math.Sqrt(Math.Pow((double)(EDDI.Core.Eddi.Instance.HomeStarSystem.x - x), 2)
+                                                     + Math.Pow((double)(EDDI.Core.Eddi.Instance.HomeStarSystem.y - y), 2)
+                                                     + Math.Pow((double)(EDDI.Core.Eddi.Instance.HomeStarSystem.z - z), 2));
                         if (distance > watch.MaxDistanceFromHome)
                         {
                             continue;
@@ -283,11 +287,11 @@ namespace EddiEddpMonitor
             return null;
         }
 
-        public void PreHandle(Event @event)
+        public void PreHandle(Event ev)
         {
         }
 
-        public void PostHandle(Event @event)
+        public void PostHandle(Event ev)
         {
         }
 

@@ -4,7 +4,7 @@ using Cottle.Functions;
 using Cottle.Settings;
 using Cottle.Stores;
 using Cottle.Values;
-using Eddi;
+using EDDI;
 using EddiDataDefinitions;
 using EddiDataProviderService;
 using EddiShipMonitor;
@@ -21,38 +21,36 @@ namespace EddiSpeechResponder
 {
     public class ScriptResolver
     {
-        private Dictionary<string, Script> scripts = new Dictionary<string, Script>();
-        private Random random;
-        private CustomSetting setting;
+        private readonly Dictionary<string, Script> _scripts = new Dictionary<string, Script>();
+        private readonly Random _random;
+        private readonly CustomSetting _setting;
 
         public static object Instance { get; set; }
 
         public ScriptResolver(Dictionary<string, Script> scripts)
         {
-            random = new Random();
-            if (scripts != null) { this.scripts = scripts; }
-            setting = new CustomSetting();
-            setting.Trimmer = BuiltinTrimmers.CollapseBlankCharacters;
+            _random = new Random();
+            if (scripts != null) { _scripts = scripts; }
+
+            _setting = new CustomSetting {Trimmer = BuiltinTrimmers.CollapseBlankCharacters};
         }
 
-        public string resolve(string name, Dictionary<string, Cottle.Value> vars, bool master = true)
+        public string Resolve(string name, Dictionary<string, Cottle.Value> vars, bool master = true)
         {
-            return resolve(name, buildStore(vars), master);
+            return Resolve(name, BuildStore(vars), master);
         }
 
-        public int priority(string name)
+        public int Priority(string name)
         {
-            Script script;
-            scripts.TryGetValue(name, out script);
-            return (script == null ? 5 : script.Priority);
+            _scripts.TryGetValue(name, out var script);
+            return script?.Priority ?? 5;
         }
 
-        public string resolve(string name, BuiltinStore store, bool master = true)
+        public string Resolve(string name, BuiltinStore store, bool master = true)
         {
             Logging.Debug("Resolving script " + name);
-            Script script;
-            scripts.TryGetValue(name, out script);
-            if (script == null || script.Value == null)
+            _scripts.TryGetValue(name, out var script);
+            if (script?.Value == null)
             {
                 Logging.Debug("No script");
                 return null;
@@ -64,13 +62,13 @@ namespace EddiSpeechResponder
                 return null;
             }
 
-            return resolveScript(script.Value, store, master);
+            return ResolveScript(script.Value, store, master);
         }
 
         /// <summary>
         /// Resolve a script with an existing store
         /// </summary>
-        public string resolveScript(string script, BuiltinStore store, bool master = true)
+        public string ResolveScript(string script, BuiltinStore store, bool master = true)
         {
             try
             {
@@ -78,11 +76,11 @@ namespace EddiSpeechResponder
                 // This means that scripts without context still work as expected
                 if (master)
                 {
-                    EDDI.Instance.State["eddi_context_last_subject"] = null;
-                    EDDI.Instance.State["eddi_context_last_action"] = null;
+                    EDDI.Core.Eddi.Instance.State["eddi_context_last_subject"] = null;
+                    EDDI.Core.Eddi.Instance.State["eddi_context_last_action"] = null;
                 }
 
-                var document = new SimpleDocument(script, setting);
+                var document = new SimpleDocument(script, _setting);
                 var result = document.Render(store);
                 // Tidy up the output script
                 result = Regex.Replace(result, " +", " ").Replace(" ,", ",").Replace(" .", ".").Trim();
@@ -101,14 +99,13 @@ namespace EddiSpeechResponder
                         stored = rgx.Replace(stored, replacement);
                     }
 
-                    EDDI.Instance.State["eddi_context_last_speech"] = stored;
-                    object lastSubject;
-                    if (EDDI.Instance.State.TryGetValue("eddi_context_last_subject", out lastSubject))
+                    EDDI.Core.Eddi.Instance.State["eddi_context_last_speech"] = stored;
+                    if (EDDI.Core.Eddi.Instance.State.TryGetValue("eddi_context_last_subject", out var lastSubject))
                     {
                         if (lastSubject != null)
                         {
                             string csLastSubject = ((string)lastSubject).ToLowerInvariant().Replace(" ", "_");
-                            EDDI.Instance.State["eddi_context_last_speech_" + csLastSubject] = stored;
+                            EDDI.Core.Eddi.Instance.State["eddi_context_last_speech_" + csLastSubject] = stored;
                         }
                     }
                 }
@@ -125,18 +122,15 @@ namespace EddiSpeechResponder
         /// <summary>
         /// Build a store from a list of variables
         /// </summary>
-        private BuiltinStore buildStore(Dictionary<string, Cottle.Value> vars)
+        private BuiltinStore BuildStore(Dictionary<string, Cottle.Value> vars)
         {
             BuiltinStore store = new BuiltinStore();
 
             // TODO fetch this from configuration
-            bool useICAO = SpeechServiceConfiguration.FromFile().EnableIcao;
+            bool useIcao = SpeechServiceConfiguration.FromFile().EnableIcao;
 
             // Function to call another script
-            store["F"] = new NativeFunction((values) =>
-            {
-                return new ScriptResolver(scripts).resolve(values[0].AsString, store, false);
-            }, 1);
+            store["F"] = new NativeFunction((values) => new ScriptResolver(_scripts).Resolve(values[0].AsString, store, false), 1);
 
             // Translation functions
             store["P"] = new NativeFunction((values) =>
@@ -145,11 +139,11 @@ namespace EddiSpeechResponder
                 string translation = val;
                 if (translation == val)
                 {
-                    translation = Translations.Body(val, useICAO);
+                    translation = Translations.Body(val, useIcao);
                 }
                 if (translation == val)
                 {
-                    translation = Translations.StarSystem(val, useICAO);
+                    translation = Translations.StarSystem(val, useIcao);
                 }
                 if (translation == val)
                 {
@@ -183,27 +177,19 @@ namespace EddiSpeechResponder
             store["false"] = false;
 
             // Helper functions
-            store["OneOf"] = new NativeFunction((values) =>
-            {
-                return new ScriptResolver(scripts).resolveScript(values[random.Next(values.Count)].AsString, store, false);
-            });
+            store["OneOf"] = new NativeFunction((values) => new ScriptResolver(_scripts).ResolveScript(values[_random.Next(values.Count)].AsString, store, false));
 
             store["Occasionally"] = new NativeFunction((values) =>
             {
-                if (random.Next((int)values[0].AsNumber) == 0)
+                if (_random.Next((int)values[0].AsNumber) == 0)
                 {
-                    return new ScriptResolver(scripts).resolveScript(values[1].AsString, store, false);
+                    return new ScriptResolver(_scripts).ResolveScript(values[1].AsString, store, false);
                 }
-                else
-                {
-                    return "";
-                }
+
+                return "";
             }, 2);
 
-            store["Humanise"] = new NativeFunction((values) =>
-            {
-                return Translations.Humanize(values[0].AsNumber);
-            }, 1);
+            store["Humanise"] = new NativeFunction((values) => Translations.Humanize(values[0].AsNumber), 1);
 
             store["List"] = new NativeFunction((values) =>
             {
@@ -231,45 +217,36 @@ namespace EddiSpeechResponder
                 return output;
             }, 1);
 
-            store["Pause"] = new NativeFunction((values) =>
-            {
-                return @"<break time=""" + values[0].AsNumber + @"ms"" />";
-            }, 1);
+            store["Pause"] = new NativeFunction((values) => @"<break time=""" + values[0].AsNumber + @"ms"" />", 1);
 
-            store["Play"] = new NativeFunction((values) =>
-            {
-                return @"<audio src=""" + values[0].AsString + @""" />";
-            }, 1);
+            store["Play"] = new NativeFunction((values) => @"<audio src=""" + values[0].AsString + @""" />", 1);
 
             store["Spacialise"] = new NativeFunction((values) =>
             {
-                string Entree = values[0].AsString;
-                if (Entree == "")
+                string entree = values[0].AsString;
+                if (entree == "")
                 { return ""; }
-                string Sortie = "";
-                string UpperSortie = "";
-                foreach (char c in Entree)
+                string sortie = "";
+                string upperSortie = "";
+                foreach (char c in entree)
                 {
-                    Sortie = Sortie + c + " ";
+                    sortie = sortie + c + " ";
                 }
-                UpperSortie = Sortie.ToUpper();
-                return UpperSortie;
+                upperSortie = sortie.ToUpper();
+                return upperSortie;
 
             }, 1);
 
             store["Emphasize"] = new NativeFunction((values) =>
             {
-                if (values.Count == 1)
+                switch (values.Count)
                 {
-                    return @"<emphasis level =""strong"">" + values[0].AsString + @"</emphasis>";
-                }
-                else if (values.Count == 2)
-                {
-                    return @"<emphasis level =""" + values[1].AsString + @""">" + values[0].AsString + @"</emphasis>";
-                }
-                else
-                {
-                    return "The Emphasize function is used improperly. Please review the documentation for correct usage.";
+                    case 1:
+                        return @"<emphasis level =""strong"">" + values[0].AsString + @"</emphasis>";
+                    case 2:
+                        return @"<emphasis level =""" + values[1].AsString + @""">" + values[0].AsString + @"</emphasis>";
+                    default:
+                        return "The Emphasize function is used improperly. Please review the documentation for correct usage.";
                 }
             }, 1, 2);
 
@@ -332,12 +309,12 @@ namespace EddiSpeechResponder
 
             store["StartsWithVowel"] = new NativeFunction((values) =>
             {
-                string Entree = values[0].AsString;
-                if (Entree == "")
+                string entree = values[0].AsString;
+                if (entree == "")
                 { return ""; }
 
                 char[] vowels = { 'a', 'à', 'â', 'ä', 'e', 'ê', 'é', 'è', 'ë', 'i', 'î', 'ï', 'o', 'ô', 'ö', 'u', 'ù', 'û', 'ü', 'œ', 'y' };
-                char firstCharacter = Entree.ToLower().ToCharArray().ElementAt(0);
+                char firstCharacter = entree.ToLower().ToCharArray().ElementAt(0);
                 Boolean result = vowels.Contains(firstCharacter);
 
                 return result;
@@ -351,7 +328,7 @@ namespace EddiSpeechResponder
             {
                 int? localId = (values.Count == 0 ? (int?)null : (int)values[0].AsNumber);
                 string model = (values.Count == 2 ? values[1].AsString : null);
-                Ship ship = findShip(localId, model);
+                Ship ship = FindShip(localId, model);
                 string result = (ship == null ? "your ship" : ship.SpokenName());
                 return result;
             }, 0, 2);
@@ -359,15 +336,15 @@ namespace EddiSpeechResponder
             store["ShipCallsign"] = new NativeFunction((values) =>
             {
                 int? localId = (values.Count == 0 ? (int?)null : (int)values[0].AsNumber);
-                Ship ship = findShip(localId, null);
+                Ship ship = FindShip(localId, null);
 
                 string result;
                 if (ship != null)
                 {
-                    if (EDDI.Instance.Cmdr != null && EDDI.Instance.Cmdr.name != null)
+                    if (EDDI.Core.Eddi.Instance.Cmdr != null && EDDI.Core.Eddi.Instance.Cmdr.name != null)
                     {
                         // Obtain the first three characters
-                        string chars = new Regex("[^a-zA-Z0-9]").Replace(EDDI.Instance.Cmdr.name, "").ToUpperInvariant().Substring(0, 3);
+                        string chars = new Regex("[^a-zA-Z0-9]").Replace(EDDI.Core.Eddi.Instance.Cmdr.name, "").ToUpperInvariant().Substring(0, 3);
                         result = ship.SpokenManufacturer() + " " + Translations.ICAO(chars);
                     }
                     else
@@ -396,10 +373,6 @@ namespace EddiSpeechResponder
             store["SecondsSince"] = new NativeFunction((values) =>
             {
                 long? date = (long?)values[0].AsNumber;
-                if (date == null)
-                {
-                    return null;
-                }
                 long now = (long)(DateTime.UtcNow.Subtract(new DateTime(1970, 1, 1))).TotalSeconds;
 
                 return now - date;
@@ -409,7 +382,7 @@ namespace EddiSpeechResponder
             {
                 // Turn a string in to an ICAO definition
                 string value = values[0].AsString;
-                if (value == null || value == "")
+                if (string.IsNullOrEmpty(value))
                 {
                     return "";
                 }
@@ -441,11 +414,7 @@ namespace EddiSpeechResponder
 
             store["TradeRatingDetails"] = new NativeFunction((values) =>
             {
-                TradeRating result = TradeRating.FromName(values[0].AsString);
-                if (result == null)
-                {
-                    result = TradeRating.FromEDName(values[0].AsString);
-                }
+                TradeRating result = TradeRating.FromName(values[0].AsString) ?? TradeRating.FromEDName(values[0].AsString);
                 return (result == null ? new ReflectionValue(new object()) : new ReflectionValue(result));
             }, 1);
 
@@ -482,7 +451,7 @@ namespace EddiSpeechResponder
             store["SystemDetails"] = new NativeFunction((values) =>
             {
                 StarSystem result = StarSystemSqLiteRepository.Instance.GetOrCreateStarSystem(values[0].AsString, true);
-                setSystemDistanceFromHome(result);
+                SetSystemDistanceFromHome(result);
                 return (result == null ? new ReflectionValue(new object()) : new ReflectionValue(result));
             }, 1);
 
@@ -492,7 +461,7 @@ namespace EddiSpeechResponder
                 if (values.Count == 1 || string.IsNullOrEmpty(values[1].AsString))
                 {
                     // Current system
-                    system = EDDI.Instance.CurrentStarSystem;
+                    system = EDDI.Core.Eddi.Instance.CurrentStarSystem;
                 }
                 else
                 {
@@ -518,7 +487,7 @@ namespace EddiSpeechResponder
                 if (values.Count == 1)
                 {
                     // Current system
-                    system = EDDI.Instance.CurrentStarSystem;
+                    system = EDDI.Core.Eddi.Instance.CurrentStarSystem;
                 }
                 else
                 {
@@ -676,18 +645,18 @@ namespace EddiSpeechResponder
                 Cottle.Value value = values[1];
                 if (value.Type == Cottle.ValueContent.Boolean)
                 {
-                    EDDI.Instance.State[name] = value.AsBoolean;
-                    store["state"] = buildState();
+                    EDDI.Core.Eddi.Instance.State[name] = value.AsBoolean;
+                    store["state"] = BuildState();
                 }
                 else if (value.Type == Cottle.ValueContent.Number)
                 {
-                    EDDI.Instance.State[name] = value.AsNumber;
-                    store["state"] = buildState();
+                    EDDI.Core.Eddi.Instance.State[name] = value.AsNumber;
+                    store["state"] = BuildState();
                 }
                 else if (value.Type == Cottle.ValueContent.String)
                 {
-                    EDDI.Instance.State[name] = value.AsString;
-                    store["state"] = buildState();
+                    EDDI.Core.Eddi.Instance.State[name] = value.AsString;
+                    store["state"] = BuildState();
                 }
                 // Ignore other possibilities
                 return "";
@@ -702,17 +671,15 @@ namespace EddiSpeechResponder
             return store;
         }
 
-        public static Dictionary<Cottle.Value, Cottle.Value> buildState()
+        public static Dictionary<Cottle.Value, Cottle.Value> BuildState()
         {
-            if (EDDI.Instance.State == null)
-            {
+            if (EDDI.Core.Eddi.Instance.State == null)
                 return null;
-            }
 
-            Dictionary<Cottle.Value, Cottle.Value> state = new Dictionary<Cottle.Value, Cottle.Value>();
-            foreach (string key in EDDI.Instance.State.Keys)
+            var state = new Dictionary<Cottle.Value, Cottle.Value>();
+            foreach (string key in EDDI.Core.Eddi.Instance.State.Keys)
             {
-                object value = EDDI.Instance.State[key];
+                object value = EDDI.Core.Eddi.Instance.State[key];
                 if (value == null)
                 {
                     continue;
@@ -738,18 +705,18 @@ namespace EddiSpeechResponder
             return state;
         }
 
-        private static Ship findShip(int? localId, string model)
+        private static Ship FindShip(int? localId, string model)
         {
             Ship ship = null;
             if (localId == null)
             {
                 // No local ID so take the current ship
-                ship = ((ShipMonitor)EDDI.Instance.ObtainMonitor("Ship monitor")).GetCurrentShip();
+                ship = ((ShipMonitor)EDDI.Core.Eddi.Instance.ObtainMonitor("Ship monitor")).GetCurrentShip();
             }
             else
             {
                 // Find the ship with the given local ID
-                ship = ((ShipMonitor)EDDI.Instance.ObtainMonitor("Ship monitor")).GetShip(localId);
+                ship = ((ShipMonitor)EDDI.Core.Eddi.Instance.ObtainMonitor("Ship monitor")).GetShip(localId);
             }
 
             if (ship == null)
@@ -764,13 +731,13 @@ namespace EddiSpeechResponder
             return ship;
         }
 
-        private void setSystemDistanceFromHome(StarSystem system)
+        private void SetSystemDistanceFromHome(StarSystem system)
         {
-            if (EDDI.Instance.HomeStarSystem != null && EDDI.Instance.HomeStarSystem.x != null && system.x != null)
+            if (EDDI.Core.Eddi.Instance.HomeStarSystem != null && EDDI.Core.Eddi.Instance.HomeStarSystem.x != null && system.x != null)
             {
-                system.distancefromhome = (decimal)Math.Round(Math.Sqrt(Math.Pow((double)(system.x - EDDI.Instance.HomeStarSystem.x), 2)
-                                                                      + Math.Pow((double)(system.y - EDDI.Instance.HomeStarSystem.y), 2)
-                                                                      + Math.Pow((double)(system.z - EDDI.Instance.HomeStarSystem.z), 2)), 2);
+                system.distancefromhome = (decimal)Math.Round(Math.Sqrt(Math.Pow((double)(system.x - EDDI.Core.Eddi.Instance.HomeStarSystem.x), 2)
+                                                                      + Math.Pow((double)(system.y - EDDI.Core.Eddi.Instance.HomeStarSystem.y), 2)
+                                                                      + Math.Pow((double)(system.z - EDDI.Core.Eddi.Instance.HomeStarSystem.z), 2)), 2);
                 Logging.Debug("Distance from home is " + system.distancefromhome);
             }
         }

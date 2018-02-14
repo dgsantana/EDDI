@@ -1,4 +1,4 @@
-﻿using Eddi;
+﻿using EDDI;
 using EddiDataDefinitions;
 using EddiEvents;
 using Newtonsoft.Json;
@@ -13,11 +13,12 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
+using EDDI.Core;
 using Utilities;
 
 namespace EddiShipMonitor
 {
-    public class ShipMonitor : EDDIMonitor
+    public class ShipMonitor : IEDDIMonitor
     {
         private static List<string> HARDPOINT_SIZES = new List<string>() { "Huge", "Large", "Medium", "Small", "Tiny" };
 
@@ -29,37 +30,40 @@ namespace EddiShipMonitor
         private static readonly object shipyardLock = new object();
         SynchronizationContext uiSyncContext;
 
-        public string MonitorName()
+        public string MonitorName
         {
-            return "Ship monitor";
+            get { return "Ship monitor"; }
         }
 
-        public string MonitorVersion()
+        public string MonitorVersion
         {
-            return "1.0.0";
+            get { return "1.0.0"; }
         }
 
-        public string MonitorDescription()
+        public string MonitorDescription
         {
-            return "Track information on your ships.";
+            get { return "Track information on your ships."; }
         }
 
-        public bool IsRequired()
+        public bool IsRequired
         {
-            return true;
+            get { return true; }
         }
 
         public ShipMonitor()
         {
             uiSyncContext = SynchronizationContext.Current;
             readShips();
-            Logging.Info("Initialised " + MonitorName() + " " + MonitorVersion());
+            Logging.Info("Initialised " + MonitorName + " " + MonitorVersion);
         }
 
-        public bool NeedsStart()
+        public bool NeedsStart
         {
-            // We don't actively do anything, just listen to events
-            return false;
+            get
+            {
+                // We don't actively do anything, just listen to events
+                return false;
+            }
         }
 
         public void Start()
@@ -73,7 +77,7 @@ namespace EddiShipMonitor
         public void Reload()
         {
             readShips();
-            Logging.Info("Reloaded " + MonitorName() + " " + MonitorVersion());
+            Logging.Info("Reloaded " + MonitorName + " " + MonitorVersion);
         }
 
         public UserControl ConfigurationTabItem()
@@ -89,114 +93,114 @@ namespace EddiShipMonitor
         /// <summary>
         /// We pre-handle the events to ensure that the data is up-to-date when it hits the responders
         /// </summary>
-        public void PreHandle(Event @event)
+        public void PreHandle(Event ev)
         {
-            Logging.Debug("Received event " + JsonConvert.SerializeObject(@event));
+            Logging.Debug("Received ev " + JsonConvert.SerializeObject(ev));
 
             // Handle the events that we care about
-            if (@event is CommanderContinuedEvent)
+            if (ev is CommanderContinuedEvent)
             {
-                handleCommanderContinuedEvent((CommanderContinuedEvent)@event);
+                handleCommanderContinuedEvent((CommanderContinuedEvent)ev);
             }
-            else if (@event is ShipPurchasedEvent)
+            else if (ev is ShipPurchasedEvent)
             {
-                handleShipPurchasedEvent((ShipPurchasedEvent)@event);
+                handleShipPurchasedEvent((ShipPurchasedEvent)ev);
             }
-            else if (@event is ShipDeliveredEvent)
+            else if (ev is ShipDeliveredEvent)
             {
-                handleShipDeliveredEvent((ShipDeliveredEvent)@event);
+                handleShipDeliveredEvent((ShipDeliveredEvent)ev);
             }
-            else if (@event is ShipSwappedEvent)
+            else if (ev is ShipSwappedEvent)
             {
-                handleShipSwappedEvent((ShipSwappedEvent)@event);
+                handleShipSwappedEvent((ShipSwappedEvent)ev);
             }
-            else if (@event is ShipRenamedEvent)
+            else if (ev is ShipRenamedEvent)
             {
-                handleShipRenamedEvent((ShipRenamedEvent)@event);
+                handleShipRenamedEvent((ShipRenamedEvent)ev);
             }
-            else if (@event is ShipSoldEvent)
+            else if (ev is ShipSoldEvent)
             {
-                handleShipSoldEvent((ShipSoldEvent)@event);
+                handleShipSoldEvent((ShipSoldEvent)ev);
             }
-            else if (@event is ShipSoldOnRebuyEvent)
+            else if (ev is ShipSoldOnRebuyEvent)
             {
-                handleShipSoldOnRebuyEvent((ShipSoldOnRebuyEvent)@event);
+                handleShipSoldOnRebuyEvent((ShipSoldOnRebuyEvent)ev);
             }
-            else if (@event is ShipLoadoutEvent)
+            else if (ev is ShipLoadoutEvent)
             {
-                handleShipLoadoutEvent((ShipLoadoutEvent)@event);
+                handleShipLoadoutEvent((ShipLoadoutEvent)ev);
             }
-            else if (@event is ShipRebootedEvent)
+            else if (ev is ShipRebootedEvent)
             {
-                handleShipRebootedEvent((ShipRebootedEvent)@event);
+                handleShipRebootedEvent((ShipRebootedEvent)ev);
             }
-            else if (@event is ShipRefuelledEvent)
+            else if (ev is ShipRefuelledEvent)
             {
-                handleShipRefuelledEvent((ShipRefuelledEvent)@event);
+                handleShipRefuelledEvent((ShipRefuelledEvent)ev);
             }
-            else if (@event is ShipAfmuRepairedEvent)
+            else if (ev is ShipAfmuRepairedEvent)
             {
-                handleShipAFMURepairedEvent((ShipAfmuRepairedEvent)@event);
+                handleShipAFMURepairedEvent((ShipAfmuRepairedEvent)ev);
             }
-            else if (@event is ShipRepairedEvent)
+            else if (ev is ShipRepairedEvent)
             {
-                handleShipRepairedEvent((ShipRepairedEvent)@event);
+                handleShipRepairedEvent((ShipRepairedEvent)ev);
             }
-            else if (@event is ShipRepairDroneEvent)
+            else if (ev is ShipRepairDroneEvent)
             {
-                handleShipRepairDroneEvent((ShipRepairDroneEvent)@event);
+                handleShipRepairDroneEvent((ShipRepairDroneEvent)ev);
             }
-            else if (@event is ShipRepurchasedEvent)
+            else if (ev is ShipRepurchasedEvent)
             {
-                handleShipRepurchasedEvent((ShipRepurchasedEvent)@event);
+                handleShipRepurchasedEvent((ShipRepurchasedEvent)ev);
             }
-            else if (@event is ShipRestockedEvent)
+            else if (ev is ShipRestockedEvent)
             {
-                handleShipRestockedEvent((ShipRestockedEvent)@event);
+                handleShipRestockedEvent((ShipRestockedEvent)ev);
             }
-            else if (@event is CargoInventoryEvent)
+            else if (ev is CargoInventoryEvent)
             {
-                handleCargoInventoryEvent((CargoInventoryEvent)@event);
+                handleCargoInventoryEvent((CargoInventoryEvent)ev);
             }
-            else if (@event is LimpetPurchasedEvent)
+            else if (ev is LimpetPurchasedEvent)
             {
-                handleLimpetPurchasedEvent((LimpetPurchasedEvent)@event);
+                handleLimpetPurchasedEvent((LimpetPurchasedEvent)ev);
             }
-            else if (@event is LimpetSoldEvent)
+            else if (ev is LimpetSoldEvent)
             {
-                handleLimpetSoldEvent((LimpetSoldEvent)@event);
+                handleLimpetSoldEvent((LimpetSoldEvent)ev);
             }
-            else if (@event is ModulePurchasedEvent)
+            else if (ev is ModulePurchasedEvent)
             {
-                handleModulePurchasedEvent((ModulePurchasedEvent)@event);
+                handleModulePurchasedEvent((ModulePurchasedEvent)ev);
             }
-            else if (@event is ModuleRetrievedEvent)
+            else if (ev is ModuleRetrievedEvent)
             {
-                handleModuleRetrievedEvent((ModuleRetrievedEvent)@event);
+                handleModuleRetrievedEvent((ModuleRetrievedEvent)ev);
             }
-            else if (@event is ModuleSoldEvent)
+            else if (ev is ModuleSoldEvent)
             {
-                handleModuleSoldEvent((ModuleSoldEvent)@event);
+                handleModuleSoldEvent((ModuleSoldEvent)ev);
             }
-            else if (@event is ModuleSoldFromStorageEvent)
+            else if (ev is ModuleSoldFromStorageEvent)
             {
-                handleModuleSoldFromStorageEvent((ModuleSoldFromStorageEvent)@event);
+                handleModuleSoldFromStorageEvent((ModuleSoldFromStorageEvent)ev);
             }
-            else if (@event is ModuleStoredEvent)
+            else if (ev is ModuleStoredEvent)
             {
-                handleModuleStoredEvent((ModuleStoredEvent)@event);
+                handleModuleStoredEvent((ModuleStoredEvent)ev);
             }
-            else if (@event is ModulesStoredEvent)
+            else if (ev is ModulesStoredEvent)
             {
-                handleModulesStoredEvent((ModulesStoredEvent)@event);
+                handleModulesStoredEvent((ModulesStoredEvent)ev);
             }
-            else if (@event is ModuleSwappedEvent)
+            else if (ev is ModuleSwappedEvent)
             {
-                handleModuleSwappedEvent((ModuleSwappedEvent)@event);
+                handleModuleSwappedEvent((ModuleSwappedEvent)ev);
             }
-            else if (@event is ModuleTransferEvent)
+            else if (ev is ModuleTransferEvent)
             {
-                handleModuleTransferEvent((ModuleTransferEvent)@event);
+                handleModuleTransferEvent((ModuleTransferEvent)ev);
             }
 
             // TODO ModulesSwappedEvent
@@ -263,8 +267,8 @@ namespace EddiShipMonitor
                 if (storedShip != null)
                 {
                     // Set location of stored ship to the current sstem
-                    storedShip.starsystem = EDDI.Instance?.CurrentStarSystem?.name;
-                    storedShip.station = EDDI.Instance?.CurrentStation?.name;
+                    storedShip.starsystem = EDDI.Core.Eddi.Instance?.CurrentStarSystem?.name;
+                    storedShip.station = EDDI.Core.Eddi.Instance?.CurrentStation?.name;
                 }
             }
             else if (@event.soldshipid != null)
@@ -292,8 +296,8 @@ namespace EddiShipMonitor
                 if (storedShip != null)
                 {
                     // Set location of stored ship to the current sstem
-                    storedShip.starsystem = EDDI.Instance?.CurrentStarSystem?.name;
-                    storedShip.station = EDDI.Instance?.CurrentStation?.name;
+                    storedShip.starsystem = EDDI.Core.Eddi.Instance?.CurrentStarSystem?.name;
+                    storedShip.station = EDDI.Core.Eddi.Instance?.CurrentStation?.name;
                 }
             }
             else if (@event.soldshipid != null)
@@ -430,7 +434,7 @@ namespace EddiShipMonitor
             ship.cargocapacity = (int)ship.compartments.Where(c => c.module != null && c.module.name.EndsWith("Cargo Rack")).Sum(c => Math.Pow(2, c.module.@class));
 
             // Update the global variable
-            EDDI.Instance.CurrentShip = ship;
+            EDDI.Core.Eddi.Instance.CurrentShip = ship;
 
             AddShip(ship);
             writeShips();
@@ -534,7 +538,7 @@ namespace EddiShipMonitor
 
         private void handleShipRepurchasedEvent(ShipRepurchasedEvent @event)
         {
-            // We don't do anything here as this is followed by a full ship loadout event
+            // We don't do anything here as this is followed by a full ship loadout ev
         }
 
         private void handleModulePurchasedEvent(ModulePurchasedEvent @event)
@@ -669,11 +673,11 @@ namespace EddiShipMonitor
             // We don't do anything here as the ship object is unaffected
         }
 
-        public void PostHandle(Event @event)
+        public void PostHandle(Event ev)
         {
-            if (@event is ShipLoadoutEvent)
+            if (ev is ShipLoadoutEvent)
             {
-                posthandleShipLoadoutEvent((ShipLoadoutEvent)@event);
+                posthandleShipLoadoutEvent((ShipLoadoutEvent)ev);
             }
         }
 
@@ -912,7 +916,7 @@ namespace EddiShipMonitor
         public Ship GetCurrentShip()
         {
             Ship currentShip = GetShip(currentShipId);
-            EDDI.Instance.CurrentShip = currentShip;
+            EDDI.Core.Eddi.Instance.CurrentShip = currentShip;
             return currentShip;
         }
 
@@ -966,7 +970,7 @@ namespace EddiShipMonitor
                     // Location for the current ship is always null, as it's with us
                     ship.starsystem = null;
                     ship.station = null;
-                    EDDI.Instance.CurrentShip = ship;
+                    EDDI.Core.Eddi.Instance.CurrentShip = ship;
                 }
                 writeShips();
             }
@@ -1182,7 +1186,7 @@ namespace EddiShipMonitor
             do
             {
                 await Task.Delay(TimeSpan.FromSeconds(20));
-                EDDI.Instance.refreshProfile();
+                EDDI.Core.Eddi.Instance.RefreshProfile();
             } while (shipId != profileId);
             Logging.Debug("Current Ship Id is: " + shipId + ", Profile Ship Id is " + profileId);
         }

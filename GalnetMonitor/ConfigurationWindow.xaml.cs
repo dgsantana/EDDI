@@ -1,4 +1,4 @@
-﻿using Eddi;
+﻿using EDDI;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -15,7 +15,7 @@ namespace GalnetMonitor
         {
             InitializeComponent();
 
-            monitor = ((GalnetMonitor)EDDI.Instance.ObtainMonitor("Galnet monitor"));
+            monitor = ((GalnetMonitor)EDDI.Core.Eddi.Instance.ObtainMonitor("Galnet monitor"));
 
             GalnetConfiguration configuration = GalnetConfiguration.FromFile();
             languageComboBox.SelectedValue = configuration.language;

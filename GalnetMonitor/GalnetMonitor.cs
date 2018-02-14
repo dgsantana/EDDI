@@ -1,4 +1,4 @@
-﻿using Eddi;
+﻿using EDDI;
 using SimpleFeedReader;
 using System;
 using System.Collections.Generic;
@@ -9,13 +9,14 @@ using Utilities;
 using EddiEvents;
 using Newtonsoft.Json.Linq;
 using System.Windows.Controls;
+using EDDI.Core;
 
 namespace GalnetMonitor
 {
     /// <summary>
-    /// A sample EDDI monitor to watch The Elite: Dangerous RSS feed and generate an event for new items
+    /// A sample EDDI monitor to watch The Elite: Dangerous RSS feed and generate an ev for new items
     /// </summary>
-    public class GalnetMonitor : EDDIMonitor
+    public class GalnetMonitor : IEDDIMonitor
     {
         private readonly string SOURCE = "https://community.elitedangerous.com/";
         private readonly string RESOURCE = "/galnet-rss";
@@ -43,35 +44,39 @@ namespace GalnetMonitor
         /// <summary>
         /// The name of the monitor; shows up in EDDI's configuration window
         /// </summary>
-        public string MonitorName()
+        public string MonitorName
         {
-            return "Galnet monitor";
+            get { return "Galnet monitor"; }
         }
 
         /// <summary>
         /// The version of the monitor; shows up in EDDI's logs
         /// </summary>
-        public string MonitorVersion()
+        public string MonitorVersion
         {
-            return "1.0.0";
+            get { return "1.0.0"; }
         }
 
         /// <summary>
         /// The description of the monitor; shows up in EDDI's configuration window
         /// </summary>
-        public string MonitorDescription()
+        public string MonitorDescription
         {
-            return @"Monitor Galnet for new news items and generate a ""Galnet news published"" event when new items are posted";
+            get
+            {
+                return
+                    @"Monitor Galnet for new news items and generate a ""Galnet news published"" ev when new items are posted";
+            }
         }
 
-        public bool IsRequired()
+        public bool IsRequired
         {
-            return false;
+            get { return false; }
         }
 
-        public bool NeedsStart()
+        public bool NeedsStart
         {
-            return true;
+            get { return true; }
         }
 
         /// <summary>
@@ -126,8 +131,8 @@ namespace GalnetMonitor
                 }
                 else
                 {
-                    // We'll update the Galnet Monitor only if a journal event has taken place within the specified number of minutes
-                    if ((DateTime.UtcNow - EDDI.Instance.JournalTimeStamp).TotalMinutes < 10)
+                    // We'll update the Galnet Monitor only if a journal ev has taken place within the specified number of minutes
+                    if ((DateTime.UtcNow - EDDI.Core.Eddi.Instance.JournalTimeStamp).TotalMinutes < 10)
                     {
                         monitorGalnet();
                     }
@@ -188,12 +193,12 @@ namespace GalnetMonitor
 
                     if (newsItems.Count > 0)
                     {
-                        // Spin out event in to a different thread to stop blocking
+                        // Spin out ev in to a different thread to stop blocking
                         Thread thread = new Thread(() =>
                         {
                             try
                             {
-                                EDDI.Instance.eventHandler(new GalnetNewsPublishedEvent(DateTime.Now, newsItems));
+                                EDDI.Core.Eddi.Instance.EventHandler(new GalnetNewsPublishedEvent(DateTime.Now, newsItems));
                             }
                             catch (ThreadAbortException)
                             {
@@ -207,11 +212,11 @@ namespace GalnetMonitor
             }
         }
 
-        public void PreHandle(Event @event)
+        public void PreHandle(Event ev)
         {
         }
 
-        public void PostHandle(Event @event)
+        public void PostHandle(Event ev)
         {
         }
 

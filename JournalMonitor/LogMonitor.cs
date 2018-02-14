@@ -14,10 +14,10 @@ namespace EddiJournalMonitor
         public string Directory;
         public Regex Filter;
         public Action<string> Callback;
-        public static string journalFileName = null;
+        public static string JournalFileName = null;
 
         // Keep track of status
-        private bool running;
+        protected bool Running;
 
         public LogMonitor(string filter) { Filter = new Regex(filter); }
 
@@ -30,14 +30,14 @@ namespace EddiJournalMonitor
 
         /// <summary>Monitor the netlog for changes, running a callback when the file changes</summary>
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Microsoft.Usage", "CA2202:Do not dispose objects multiple times")] // this usage is perfectly correct
-        public void start()
+        public virtual void Start()
         {
             if (Directory == null || Directory.Trim() == "")
             {
                 return;
             }
 
-            running = true;
+            Running = true;
 
             // Start off by moving to the end of the file
             long lastSize = 0;
@@ -55,7 +55,7 @@ namespace EddiJournalMonitor
             {
                 lastSize = fileInfo.Length;
                 lastName = fileInfo.Name;
-                journalFileName = lastName;
+                JournalFileName = lastName;
 
                 // Elite-specific: start off by grabbing the first line so that we know if we're in beta or live
                 using (FileStream fs = new FileStream(fileInfo.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
@@ -72,16 +72,16 @@ namespace EddiJournalMonitor
             }
 
             // Main loop
-            while (running)
+            while (Running)
             {
                 fileInfo = FindLatestFile(Directory, Filter);
                 if (fileInfo == null || fileInfo.Name != lastName)
                 {
-                    lastName = fileInfo == null ? null : fileInfo.Name;
+                    lastName = fileInfo?.Name;
                     lastSize = 0;
                     if (fileInfo != null)
                     {
-                        journalFileName = fileInfo.Name;
+                        JournalFileName = fileInfo.Name;
                     }
                     else
                     {
@@ -98,7 +98,7 @@ namespace EddiJournalMonitor
                 }
                 else
                 {
-                    journalFileName = fileInfo.Name;
+                    JournalFileName = fileInfo.Name;
                     long thisSize = fileInfo.Length;
                     long seekPos = 0;
                     int readLen = 0;
@@ -142,9 +142,9 @@ namespace EddiJournalMonitor
             }
         }
 
-        public void stop()
+        public virtual void Stop()
         {
-            running = false;
+            Running = false;
         }
 
         /// <summary>Find the latest file in a given directory matching a given expression, or null if no such file exists</summary>
@@ -157,20 +157,13 @@ namespace EddiJournalMonitor
             }
 
             var directory = new DirectoryInfo(path);
-            if (directory != null)
+            try
             {
-                try
-                {
-                    FileInfo info = directory.GetFiles().Where(f => filter == null || filter.IsMatch(f.Name)).OrderByDescending(f => f.LastWriteTime).FirstOrDefault();
-                    if (info != null)
-                    {
-                        // This info can be cached so force a refresh
-                        info.Refresh();
-                    }
-                    return info;
-                }
-                catch { }
+                FileInfo info = directory.GetFiles().Where(f => filter == null || filter.IsMatch(f.Name)).OrderByDescending(f => f.LastWriteTime).FirstOrDefault();
+                info?.Refresh();
+                return info;
             }
+            catch { }
             return null;
         }
     }

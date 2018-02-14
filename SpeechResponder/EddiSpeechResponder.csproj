@@ -51,7 +51,6 @@
   <ItemGroup>
     <Reference Include="CommonMark, Version=0.1.0.0, Culture=neutral, PublicKeyToken=001ef8810438905d, processorArchitecture=MSIL">
       <HintPath>..\packages\CommonMark.NET.0.15.1\lib\net45\CommonMark.dll</HintPath>
-      <Private>True</Private>
     </Reference>
     <Reference Include="Cottle, Version=1.4.0.3, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\Cottle.1.4.0.4\lib\net40\Cottle.dll</HintPath>
@@ -107,6 +106,10 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\EDDI.Core\EDDI.Core.csproj">
+      <Project>{C83869E0-6649-4C2C-A9EB-7D771799734C}</Project>
+      <Name>EDDI.Core</Name>
+    </ProjectReference>
     <ProjectReference Include="..\EDDI\Eddi.csproj">
       <Project>{EC7BA042-A370-447F-8C3E-241358CEBCBB}</Project>
       <Name>Eddi</Name>
@@ -145,14 +148,15 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="app.config" />
     <None Include="eddi.json" />
+    <None Include="packages.config" />
     <None Include="Variables.md">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="Help.md">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Page Include="CopyPersonalityWindow.xaml">

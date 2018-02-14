@@ -17,11 +17,11 @@ namespace GalnetMonitor
             VARIABLES.Add("items", "The published news items");
         }
 
-        public List<News> items { get; private set; }
+        public List<News> Items { get; private set; }
 
         public GalnetNewsPublishedEvent(DateTime timestamp, List<News> items) : base(timestamp, NAME)
         {
-            this.items = items;
+            Items = items;
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using Eddi;
+﻿using EDDI;
 using System.Windows.Controls;
 using System.Windows.Data;
 
@@ -15,14 +15,14 @@ namespace EddiMaterialMonitor
         {
             InitializeComponent();
 
-            monitor = ((MaterialMonitor)EDDI.Instance.ObtainMonitor("Material monitor"));
-            materialsData.ItemsSource = monitor.inventory;
+            monitor = ((MaterialMonitor)EDDI.Core.Eddi.Instance.ObtainMonitor("Material monitor"));
+            materialsData.ItemsSource = monitor.Inventory;
         }
 
         private void materialsUpdated(object sender, DataTransferEventArgs e)
         {
             // Update the material monitor's information
-            monitor.writeMaterials();
+            monitor.WriteMaterials();
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using Eddi;
+﻿using EDDI;
 using EddiEvents;
 using EddiJournalMonitor;
 using EddiShipMonitor;
@@ -15,26 +15,26 @@ namespace EddiSpeechResponder
     /// <summary>
     /// Interaction logic for ConfigurationWindow.xaml
     /// </summary>
-    public partial class ConfigurationWindow : UserControl, INotifyPropertyChanged
+    public partial class ConfigurationWindow : INotifyPropertyChanged
     {
-        private ObservableCollection<Personality> personalities;
+        private ObservableCollection<Personality> _personalities;
         public ObservableCollection<Personality> Personalities
         {
-            get { return personalities; }
-            set { personalities = value; OnPropertyChanged("Personalities"); }
+            get => _personalities;
+            set { _personalities = value; OnPropertyChanged("Personalities"); }
         }
-        private Personality personality;
+        private Personality _personality;
         public Personality Personality
         {
-            get { return personality; }
+            get => _personality;
             set
             {
-                personality = value;
-                viewEditContent = value != null && value.IsEditable ? "Edit" : "View";
+                _personality = value;
+                ViewEditContent = value != null && value.IsEditable ? "Edit" : "View";
                 OnPropertyChanged("Personality");
             }
         }
-        public string viewEditContent = "View";
+        public string ViewEditContent = "View";
 
         public event PropertyChangedEventHandler PropertyChanged;
         protected void OnPropertyChanged(string name)
@@ -47,9 +47,9 @@ namespace EddiSpeechResponder
             InitializeComponent();
             DataContext = this;
 
-            ObservableCollection<Personality> personalities = new ObservableCollection<Personality>();
+            var personalities =
+                new ObservableCollection<Personality> {Personality.Default()};
             // Add our default personality
-            personalities.Add(Personality.Default());
             foreach (Personality personality in Personality.AllFromDirectory())
             {
                 personalities.Add(personality);
@@ -70,23 +70,23 @@ namespace EddiSpeechResponder
                 if (personality.Name == configuration.Personality)
                 {
                     Personality = personality;
-                    personalityDefaultTxt(personality);
+                    PersonalityDefaultTxt(personality);
                     break;
                 }
             }
         }
 
-        private void eddiScriptsUpdated(object sender, RoutedEventArgs e)
+        private void EddiScriptsUpdated(object sender, RoutedEventArgs e)
         {
-            updateScriptsConfiguration();
+            UpdateScriptsConfiguration();
         }
 
-        private void eddiScriptsUpdated(object sender, DataTransferEventArgs e)
+        private void EddiScriptsUpdated(object sender, DataTransferEventArgs e)
         {
-            updateScriptsConfiguration();
+            UpdateScriptsConfiguration();
         }
 
-        private void editScript(object sender, RoutedEventArgs e)
+        private void EditScript(object sender, RoutedEventArgs e)
         {
             Script script = ((KeyValuePair<string, Script>)((Button)e.Source).DataContext).Value;
             EditScriptWindow editScriptWindow = new EditScriptWindow(Personality.Scripts, script.Name);
@@ -94,39 +94,38 @@ namespace EddiSpeechResponder
             scriptsData.Items.Refresh();
         }
 
-        private void viewScript(object sender, RoutedEventArgs e)
+        private void ViewScript(object sender, RoutedEventArgs e)
         {
             Script script = ((KeyValuePair<string, Script>)((Button)e.Source).DataContext).Value;
             ViewScriptWindow viewScriptWindow = new ViewScriptWindow(Personality.Scripts, script.Name);
             viewScriptWindow.Show();
         }
 
-        private void testScript(object sender, RoutedEventArgs e)
+        private void TestScript(object sender, RoutedEventArgs e)
         {
             Script script = ((KeyValuePair<string, Script>)((Button)e.Source).DataContext).Value;
             SpeechResponder responder = new SpeechResponder();
             responder.Start();
             // See if we have a sample
             List<Event> sampleEvents;
-            object sample = Events.SampleByName(script.Name);
-            if (sample == null)
+            var sample = Events.SampleByName(script.Name);
+            switch (sample)
             {
-                sampleEvents = new List<Event>();
-            }
-            else if (sample is string)
-            {
-                // It's as tring so a journal entry.  Parse it
-                sampleEvents = JournalMonitor.ParseJournalEntry((string)sample);
-            }
-            else if (sample is Event)
-            {
-                // It's a direct event
-                sampleEvents = new List<Event>() { (Event)sample };
-            }
-            else
-            {
-                Logging.Warn("Unknown sample type " + sample.GetType());
-                sampleEvents = new List<Event>();
+                case null:
+                    sampleEvents = new List<Event>();
+                    break;
+                case string _:
+                    // It's as tring so a journal entry.  Parse it
+                    sampleEvents = JournalMonitor.ParseJournalEntry((string)sample);
+                    break;
+                case Event _:
+                    // It's a direct event
+                    sampleEvents = new List<Event>() { (Event)sample };
+                    break;
+                default:
+                    Logging.Warn("Unknown sample type " + sample.GetType());
+                    sampleEvents = new List<Event>();
+                    break;
             }
 
             ScriptResolver scriptResolver = new ScriptResolver(Personality.Scripts);
@@ -136,11 +135,11 @@ namespace EddiSpeechResponder
             }
             foreach (Event sampleEvent in sampleEvents)
             {
-                responder.Say(scriptResolver, ((ShipMonitor)EDDI.Instance.ObtainMonitor("Ship monitor")).GetCurrentShip(), script.Name, sampleEvent, null, null, false);
+                responder.Say(scriptResolver, ((ShipMonitor)EDDI.Core.Eddi.Instance.ObtainMonitor("Ship monitor")).GetCurrentShip(), script.Name, sampleEvent, null, null, false);
             }
         }
 
-        private void deleteScript(object sender, RoutedEventArgs e)
+        private void DeleteScript(object sender, RoutedEventArgs e)
         {
             Script script = ((KeyValuePair<string, Script>)((Button)e.Source).DataContext).Value;
             string messageBoxText = "Are you sure you want to delete the \"" + script.Name + "\" script?";
@@ -152,43 +151,43 @@ namespace EddiSpeechResponder
                     // Remove the script from the list
                     Personality.Scripts.Remove(script.Name);
                     Personality.ToFile();
-                    EDDI.Instance.Reload("Speech responder");
+                    EDDI.Core.Eddi.Instance.Reload("Speech responder");
                     // We updated a property of the personality but not the personality itself so need to manually update items
                     scriptsData.Items.Refresh();
                     break;
             }
         }
 
-        private void resetScript(object sender, RoutedEventArgs e)
+        private void ResetScript(object sender, RoutedEventArgs e)
         {
             Script script = ((KeyValuePair<string, Script>)((Button)e.Source).DataContext).Value;
             script.Value = null;
-            eddiScriptsUpdated(sender, e);
+            EddiScriptsUpdated(sender, e);
             scriptsData.Items.Refresh();
         }
 
-        private void updateScriptsConfiguration()
+        private void UpdateScriptsConfiguration()
         {
             if (Personality != null)
             {
                 Personality.ToFile();
-                EDDI.Instance.Reload("Speech responder");
+                EDDI.Core.Eddi.Instance.Reload("Speech responder");
             }
         }
 
-        private void personalityChanged(object sender, SelectionChangedEventArgs e)
+        private void PersonalityChanged(object sender, SelectionChangedEventArgs e)
         {
             if (Personality != null)
             {
-                personalityDefaultTxt(Personality);
+                PersonalityDefaultTxt(Personality);
                 SpeechResponderConfiguration configuration = SpeechResponderConfiguration.FromFile();
                 configuration.Personality = Personality.Name;
                 configuration.ToFile();
-                EDDI.Instance.Reload("Speech responder");
+                EDDI.Core.Eddi.Instance.Reload("Speech responder");
             }
         }
 
-        private void newScriptClicked(object sender, RoutedEventArgs e)
+        private void NewScriptClicked(object sender, RoutedEventArgs e)
         {
             string baseName = "New function";
             string scriptName = baseName;
@@ -205,7 +204,7 @@ namespace EddiSpeechResponder
             if (editScriptWindow.ShowDialog() == true)
             {
                 Personality.ToFile();
-                EDDI.Instance.Reload("Speech responder");
+                EDDI.Core.Eddi.Instance.Reload("Speech responder");
             }
             else
             {
@@ -214,20 +213,20 @@ namespace EddiSpeechResponder
             scriptsData.Items.Refresh();
         }
 
-        private void copyPersonalityClicked(object sender, RoutedEventArgs e)
+        private void CopyPersonalityClicked(object sender, RoutedEventArgs e)
         {
             CopyPersonalityWindow window = new CopyPersonalityWindow(Personality);
             if (window.ShowDialog() == true)
             {
-                string PersonalityName = window.PersonalityName == null ? null : window.PersonalityName.Trim();
-                string PersonalityDescription = window.PersonalityDescription == null ? null : window.PersonalityDescription.Trim();
-                Personality newPersonality = Personality.Copy(PersonalityName, PersonalityDescription);
+                string personalityName = window.PersonalityName == null ? null : window.PersonalityName.Trim();
+                string personalityDescription = window.PersonalityDescription == null ? null : window.PersonalityDescription.Trim();
+                Personality newPersonality = Personality.Copy(personalityName, personalityDescription);
                 Personalities.Add(newPersonality);
                 Personality = newPersonality;
             }
         }
 
-        private void deletePersonalityClicked(object sender, RoutedEventArgs e)
+        private void DeletePersonalityClicked(object sender, RoutedEventArgs e)
         {
             string messageBoxText = "Are you sure you want to delete the \"" + Personality.Name + "\" personality?";
             string caption = "Delete Personality";
@@ -244,39 +243,39 @@ namespace EddiSpeechResponder
             }
         }
 
-        private void subtitlesEnabled(object sender, RoutedEventArgs e)
+        private void SubtitlesEnabled(object sender, RoutedEventArgs e)
         {
             SpeechResponderConfiguration configuration = SpeechResponderConfiguration.FromFile();
             configuration.Subtitles = true;
             configuration.ToFile();
-            EDDI.Instance.Reload("Speech responder");
+            EDDI.Core.Eddi.Instance.Reload("Speech responder");
         }
 
-        private void subtitlesDisabled(object sender, RoutedEventArgs e)
+        private void SubtitlesDisabled(object sender, RoutedEventArgs e)
         {
             SpeechResponderConfiguration configuration = SpeechResponderConfiguration.FromFile();
             configuration.Subtitles = false;
             configuration.ToFile();
-            EDDI.Instance.Reload("Speech responder");
+            EDDI.Core.Eddi.Instance.Reload("Speech responder");
         }
 
-        private void subtitlesOnlyEnabled(object sender, RoutedEventArgs e)
+        private void SubtitlesOnlyEnabled(object sender, RoutedEventArgs e)
         {
             SpeechResponderConfiguration configuration = SpeechResponderConfiguration.FromFile();
             configuration.SubtitlesOnly = true;
             configuration.ToFile();
-            EDDI.Instance.Reload("Speech responder");
+            EDDI.Core.Eddi.Instance.Reload("Speech responder");
         }
 
-        private void subtitlesOnlyDisabled(object sender, RoutedEventArgs e)
+        private void SubtitlesOnlyDisabled(object sender, RoutedEventArgs e)
         {
             SpeechResponderConfiguration configuration = SpeechResponderConfiguration.FromFile();
             configuration.SubtitlesOnly = false;
             configuration.ToFile();
-            EDDI.Instance.Reload("Speech responder");
+            EDDI.Core.Eddi.Instance.Reload("Speech responder");
         }
 
-        private void personalityDefaultTxt(Personality personality)
+        private void PersonalityDefaultTxt(Personality personality)
         {
             if (personality.IsDefault)
             {

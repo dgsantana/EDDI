@@ -1,29 +1,29 @@
-﻿using EddiEvents;
-using System.AddIn.Pipeline;
+﻿using System.AddIn.Pipeline;
 using System.Windows.Controls;
+using EddiEvents;
 
-namespace Eddi
+namespace EDDI.Core
 {
     /// <summary>
     /// The methods required for an EDDI responder.
     /// </summary>
     [AddInContract]
-    public interface EDDIResponder
+    public interface IEDDIResponder
     {
         /// <summary>
         /// A short name for the responder
         /// </summary>
-        string ResponderName();
+        string ResponderName { get; }
 
         /// <summary>
         /// The version of the responder
         /// </summary>
-        string ResponderVersion();
+        string ResponderVersion { get; }
 
         /// <summary>
         /// A brief description of the responder
         /// </summary>
-        string ResponderDescription();
+        string ResponderDescription { get; }
 
         /// <summary>
         /// Called when this responder is started; time to carry out initialisation

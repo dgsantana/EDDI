@@ -6,7 +6,7 @@ using EddiEvents;
 using EddiJournalMonitor;
 using EddiShipMonitor;
 using Utilities;
-using Eddi;
+using EDDI;
 
 namespace Tests
 {
