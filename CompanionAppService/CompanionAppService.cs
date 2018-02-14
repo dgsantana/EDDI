@@ -18,17 +18,17 @@ namespace EddiCompanionAppService
 {
     public class CompanionAppService
     {
-        private static string BASE_URL = "https://companion.orerve.net";
-        private static string ROOT_URL = "/";
-        private static string LOGIN_URL = "/user/login";
-        private static string CONFIRM_URL = "/user/confirm";
-        private static string PROFILE_URL = "/profile";
-        private static string MARKET_URL = "/market";
-        private static string SHIPYARD_URL = "/shipyard";
+        private const string BASE_URL = "https://companion.orerve.net";
+        private const string ROOT_URL = "/";
+        private const string LOGIN_URL = "/user/login";
+        private const string CONFIRM_URL = "/user/confirm";
+        private const string PROFILE_URL = "/profile";
+        private const string MARKET_URL = "/market";
+        private const string SHIPYARD_URL = "/shipyard";
 
         // We cache the profile to avoid spamming the service
-        private Profile cachedProfile;
-        private DateTime cachedProfileExpires;
+        private Profile _cachedProfile;
+        private DateTime _cachedProfileExpires;
 
         public enum State
         {
@@ -40,25 +40,25 @@ namespace EddiCompanionAppService
 
         public CompanionAppCredentials Credentials;
 
-        private static CompanionAppService instance;
+        private static CompanionAppService _instance;
 
-        private static readonly object instanceLock = new object();
+        private static readonly object InstanceLock = new object();
         public static CompanionAppService Instance
         {
             get
             {
-                if (instance == null)
+                if (_instance == null)
                 {
-                    lock (instanceLock)
+                    lock (InstanceLock)
                     {
-                        if (instance == null)
+                        if (_instance == null)
                         {
                             Logging.Debug("No companion API instance: creating one");
-                            instance = new CompanionAppService();
+                            _instance = new CompanionAppService();
                         }
                     }
                 }
-                return instance;
+                return _instance;
             }
         }
         private CompanionAppService()
@@ -200,20 +200,20 @@ namespace EddiCompanionAppService
                 Logging.Debug("Leaving");
                 throw new EliteDangerousCompanionAppIllegalStateException("Service in incorrect state to provide profile (" + CurrentState + ")");
             }
-            if ((!forceRefresh) && cachedProfileExpires > DateTime.Now)
+            if ((!forceRefresh) && _cachedProfileExpires > DateTime.Now)
             {
                 // return the cached version
                 Logging.Debug("Returning cached profile");
                 Logging.Debug("Leaving");
-                return cachedProfile;
+                return _cachedProfile;
             }
 
-            string data = obtainProfile(BASE_URL + PROFILE_URL);
+            string data = ObtainProfile(BASE_URL + PROFILE_URL);
 
             if (data == null || data == "Profile unavailable")
             {
                 // Happens if there is a problem with the API.  Logging in again might clear this...
-                relogin();
+                Relogin();
                 if (CurrentState != State.READY)
                 {
                     // No luck; give up
@@ -223,7 +223,7 @@ namespace EddiCompanionAppService
                 else
                 {
                     // Looks like login worked; try again
-                    data = obtainProfile(BASE_URL + PROFILE_URL);
+                    data = ObtainProfile(BASE_URL + PROFILE_URL);
 
                     if (data == null || data == "Profile unavailable")
 
@@ -238,24 +238,22 @@ namespace EddiCompanionAppService
 
             try
             {
-                JObject json = JObject.Parse(data);
-                cachedProfile = ProfileFromJson(data);
-				
+                _cachedProfile = ProfileFromJson(data);
             }
             catch (JsonException ex)
             {
                 Logging.Error("Failed to parse companion profile", ex);
-                cachedProfile = null;
+                _cachedProfile = null;
             }
 
-            if (cachedProfile != null)
+            if (_cachedProfile != null)
             {
-                cachedProfileExpires = DateTime.Now.AddSeconds(30);
-                Logging.Debug("Profile is " + JsonConvert.SerializeObject(cachedProfile));
+                _cachedProfileExpires = DateTime.Now.AddSeconds(30);
+                Logging.Debug("Profile is " + JsonConvert.SerializeObject(_cachedProfile));
             }
 
             Logging.Debug("Leaving");
-            return cachedProfile;
+            return _cachedProfile;
         }
 
         public Profile Station(string systemName)
@@ -272,45 +270,45 @@ namespace EddiCompanionAppService
             try
             {
                 Logging.Debug("Getting station market data");
-                string market = obtainProfile(BASE_URL + MARKET_URL);
+                string market = ObtainProfile(BASE_URL + MARKET_URL);
                 market = "{\"lastStarport\":" + market + "}";
                 JObject marketJson = JObject.Parse(market);
                 string lastStarport = (string)marketJson["lastStarport"]["name"];
 
-                cachedProfile.CurrentStarSystem = StarSystemSqLiteRepository.Instance.GetOrCreateStarSystem(systemName);
-                cachedProfile.LastStation = cachedProfile.CurrentStarSystem.stations.Find(s => s.name == lastStarport);
-                if (cachedProfile.LastStation == null)
+                _cachedProfile.CurrentStarSystem = StarSystemSqLiteRepository.Instance.GetOrCreateStarSystem(systemName);
+                _cachedProfile.LastStation = _cachedProfile.CurrentStarSystem.stations.Find(s => s.name == lastStarport);
+                if (_cachedProfile.LastStation == null)
                 {
                     // Don't have a station so make one up
-                    cachedProfile.LastStation = new Station();
-                    cachedProfile.LastStation.name = lastStarport;
+                    _cachedProfile.LastStation = new Station();
+                    _cachedProfile.LastStation.name = lastStarport;
                 }
-                cachedProfile.LastStation.systemname = systemName;
+                _cachedProfile.LastStation.systemname = systemName;
 
-                if (cachedProfile.LastStation.hasmarket ?? false)
+                if (_cachedProfile.LastStation.hasmarket ?? false)
                 {
-                    cachedProfile.LastStation.economies = EconomiesFromProfile(marketJson);
-                    cachedProfile.LastStation.commodities = CommoditiesFromProfile(marketJson);
-                    cachedProfile.LastStation.prohibited = ProhibitedCommoditiesFromProfile(marketJson);
+                    _cachedProfile.LastStation.economies = EconomiesFromProfile(marketJson);
+                    _cachedProfile.LastStation.commodities = CommoditiesFromProfile(marketJson);
+                    _cachedProfile.LastStation.prohibited = ProhibitedCommoditiesFromProfile(marketJson);
                 }
 
-                if (cachedProfile.LastStation.hasoutfitting ?? false)
+                if (_cachedProfile.LastStation.hasoutfitting ?? false)
                 {
                     Logging.Debug("Getting station outfitting data");
-                    string outfitting = obtainProfile(BASE_URL + SHIPYARD_URL);
+                    string outfitting = ObtainProfile(BASE_URL + SHIPYARD_URL);
                     outfitting = "{\"lastStarport\":" + outfitting + "}";
                     JObject outfittingJson = JObject.Parse(outfitting);
-                    cachedProfile.LastStation.outfitting = OutfittingFromProfile(outfittingJson);
+                    _cachedProfile.LastStation.outfitting = OutfittingFromProfile(outfittingJson);
                 }
 
-                if (cachedProfile.LastStation.hasshipyard ?? false)
+                if (_cachedProfile.LastStation.hasshipyard ?? false)
                 {
                     Logging.Debug("Getting station shipyard data");
                     Thread.Sleep(5000);
-                    string shipyard = obtainProfile(BASE_URL + SHIPYARD_URL);
+                    string shipyard = ObtainProfile(BASE_URL + SHIPYARD_URL);
                     shipyard = "{\"lastStarport\":" + shipyard + "}";
                     JObject shipyardJson = JObject.Parse(shipyard);
-                    cachedProfile.LastStation.shipyard = ShipyardFromProfile(shipyardJson);
+                    _cachedProfile.LastStation.shipyard = ShipyardFromProfile(shipyardJson);
                 }
             }
             catch (JsonException ex)
@@ -318,13 +316,13 @@ namespace EddiCompanionAppService
                 Logging.Error("Failed to parse companion station data", ex);
             }
 
-            Logging.Debug("Station is " + JsonConvert.SerializeObject(cachedProfile));
+            Logging.Debug("Station is " + JsonConvert.SerializeObject(_cachedProfile));
             Logging.Debug("Leaving");
-            return cachedProfile;
+            return _cachedProfile;
         }
 
 
-        private string obtainProfile(string url)
+        private string ObtainProfile(string url)
         {
             HttpWebRequest request = GetRequest(url);
             using (HttpWebResponse response = GetResponse(request))
@@ -341,7 +339,7 @@ namespace EddiCompanionAppService
                     return null;
                 }
 
-                return getResponseData(response);
+                return GetResponseData(response);
             }
         }
 
@@ -349,7 +347,7 @@ namespace EddiCompanionAppService
          * Try to relogin if there is some issue that requires it.
          * Throws an exception if it failed to log in.
          */
-        private void relogin()
+        private void Relogin()
         {
             // Need to log in again.
             CurrentState = State.NEEDS_LOGIN;
@@ -365,7 +363,7 @@ namespace EddiCompanionAppService
         /**
          * Obtain the response data from an HTTP web response
          */
-        private string getResponseData(HttpWebResponse response)
+        private string GetResponseData(HttpWebResponse response)
         {
             // Obtain and parse our response
             var encoding = response.CharacterSet == ""
@@ -377,7 +375,7 @@ namespace EddiCompanionAppService
             {
                 var reader = new StreamReader(stream, encoding);
                 string data = reader.ReadToEnd();
-                if (data == null || data.Trim() == "")
+                if (string.IsNullOrWhiteSpace(data))
                 {
                     Logging.Warn("No data returned");
                     return null;
@@ -392,7 +390,7 @@ namespace EddiCompanionAppService
         {
             Logging.Debug("Entered");
 
-            HttpWebRequest request = (HttpWebRequest)HttpWebRequest.Create(url);
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
             CookieContainer cookieContainer = new CookieContainer();
             AddCompanionAppCookie(cookieContainer, Credentials);
             AddMachineIdCookie(cookieContainer, Credentials);
@@ -408,7 +406,7 @@ namespace EddiCompanionAppService
         }
 
         // Obtain a response, ensuring that we obtain the response's cookies
-        private HttpWebResponse GetResponse(HttpWebRequest request)
+        private HttpWebResponse GetResponse(WebRequest request)
         {
             Logging.Debug("Entered");
             Logging.Debug("Requesting " + request.RequestUri);
@@ -431,7 +429,7 @@ namespace EddiCompanionAppService
             return response;
         }
 
-        private void UpdateCredentials(HttpWebResponse response)
+        private void UpdateCredentials(WebResponse response)
         {
             Logging.Debug("Entered");
 
@@ -463,12 +461,14 @@ namespace EddiCompanionAppService
         {
             if (cookies != null && credentials.appId != null)
             {
-                var appCookie = new Cookie();
-                appCookie.Domain = "companion.orerve.net";
-                appCookie.Path = "/";
-                appCookie.Name = "CompanionApp";
-                appCookie.Value = credentials.appId;
-                appCookie.Secure = false;
+                var appCookie = new Cookie
+                {
+                    Domain = "companion.orerve.net",
+                    Path = "/",
+                    Name = "CompanionApp",
+                    Value = credentials.appId,
+                    Secure = false
+                };
                 cookies.Add(appCookie);
             }
         }
@@ -511,12 +511,14 @@ namespace EddiCompanionAppService
         {
             if (cookies != null && credentials.machineToken != null)
             {
-                var machineTokenCookie = new Cookie();
-                machineTokenCookie.Domain = "companion.orerve.net";
-                machineTokenCookie.Path = "/";
-                machineTokenCookie.Name = "mtk";
-                machineTokenCookie.Value = credentials.machineToken;
-                machineTokenCookie.Secure = true;
+                var machineTokenCookie = new Cookie
+                {
+                    Domain = "companion.orerve.net",
+                    Path = "/",
+                    Name = "mtk",
+                    Value = credentials.machineToken,
+                    Secure = true
+                };
                 // The expiry is embedded in the cookie value
                 if (credentials.machineToken.IndexOf("%7C") == -1)
                 {
@@ -546,11 +548,11 @@ namespace EddiCompanionAppService
         {
             Logging.Debug("Entered");
             Profile profile = null;
-            if (data != null && data != "")
+            if (!string.IsNullOrEmpty(data))
             {
                 profile = ProfileFromJson(JObject.Parse(data));
+                AugmentCmdrInfo(profile.Cmdr);
             }
-            AugmentCmdrInfo(profile.Cmdr);
             Logging.Debug("Leaving");
             return profile;
         }
@@ -559,47 +561,48 @@ namespace EddiCompanionAppService
         public static Profile ProfileFromJson(JObject json)
         {
             Logging.Debug("Entered");
-            Profile Profile = new Profile();
-            Profile.json = json;
+            Profile profile = new Profile();
+            profile.json = json;
 
             if (json["commander"] != null)
             {
-                Commander Commander = new Commander();
-                Commander.name = (string)json["commander"]["name"];
+                Commander commander = new Commander
+                {
+                    name = (string)json["commander"]["name"],
+                    combatrating = CombatRating.FromRank((int)json["commander"]["rank"]["combat"]),
+                    traderating = TradeRating.FromRank((int)json["commander"]["rank"]["trade"]),
+                    explorationrating = ExplorationRating.FromRank((int)json["commander"]["rank"]["explore"]),
+                    cqcrating = CQCRating.FromRank((int)json["commander"]["rank"]["cqc"]),
+                    empirerating = EmpireRating.FromRank((int)json["commander"]["rank"]["empire"]),
+                    federationrating = FederationRating.FromRank((int)json["commander"]["rank"]["federation"]),
+                    credits = (long)json["commander"]["credits"],
+                    debt = (long)json["commander"]["debt"]
+                };
 
-                Commander.combatrating = CombatRating.FromRank((int)json["commander"]["rank"]["combat"]);
-                Commander.traderating = TradeRating.FromRank((int)json["commander"]["rank"]["trade"]);
-                Commander.explorationrating = ExplorationRating.FromRank((int)json["commander"]["rank"]["explore"]);
-                Commander.cqcrating = CQCRating.FromRank((int)json["commander"]["rank"]["cqc"]);
-                Commander.empirerating = EmpireRating.FromRank((int)json["commander"]["rank"]["empire"]);
-                Commander.federationrating = FederationRating.FromRank((int)json["commander"]["rank"]["federation"]);
-
-                Commander.credits = (long)json["commander"]["credits"];
-                Commander.debt = (long)json["commander"]["debt"];
-                Profile.Cmdr = Commander;
+                profile.Cmdr = commander;
 
                 string systemName = json["lastSystem"] == null ? null : (string)json["lastSystem"]["name"];
                 if (systemName != null)
                 {
-                    Profile.CurrentStarSystem = StarSystemSqLiteRepository.Instance.GetOrCreateStarSystem(systemName);
+                    profile.CurrentStarSystem = StarSystemSqLiteRepository.Instance.GetOrCreateStarSystem(systemName);
                 }
 
                 if (json["lastStarport"] != null)
                 {
-                    Profile.LastStation =  Profile.CurrentStarSystem.stations.Find(s => s.name == (string)json["lastStarport"]["name"]);
-                    if (Profile.LastStation == null)
+                    profile.LastStation = profile.CurrentStarSystem.stations.Find(s => s.name == (string)json["lastStarport"]["name"]);
+                    if (profile.LastStation == null)
                     {
                         // Don't have a station so make one up
-                        Profile.LastStation = new Station();
-                        Profile.LastStation.name = (string)json["lastStarport"]["name"];
+                        profile.LastStation = new Station();
+                        profile.LastStation.name = (string)json["lastStarport"]["name"];
                     }
 
-                    Profile.LastStation.systemname = Profile.CurrentStarSystem.name;
+                    profile.LastStation.systemname = profile.CurrentStarSystem.name;
                 }
             }
 
             Logging.Debug("Leaving");
-            return Profile;
+            return profile;
         }
 
         private static void AugmentCmdrInfo(Commander cmdr)
@@ -623,164 +626,164 @@ namespace EddiCompanionAppService
         // Obtain the list of outfitting modules from the profile
         public static List<Module> OutfittingFromProfile(dynamic json)
         {
-            List<Module> Modules = new List<Module>();
+            List<Module> modules = new List<Module>();
 
             if (json["lastStarport"] != null && json["lastStarport"]["modules"] != null)
             {
-                foreach (dynamic moduleJson in json["lastStarport"]["modules"])
+                foreach (dynamic o in json["lastStarport"]["modules"])
                 {
-                    dynamic module = moduleJson.Value;
+                    dynamic moduleJson = o.Value;
                     // Not interested in paintjobs, decals, ...
-                    if (module["category"] == "weapon" || module["category"] == "module" || module["category"] == "utility")
+                    if (moduleJson["category"] == "weapon" || moduleJson["category"] == "module" || moduleJson["category"] == "utility")
                     {
-                        Module Module = ModuleDefinitions.ModuleFromEliteID((long)module["id"]);
-                        if (Module.name == null)
+                        Module module = ModuleDefinitions.ModuleFromEliteID((long)moduleJson["id"]);
+                        if (module.name == null)
                         {
                             // Unknown module; log an error so that we can update the definitions
-                            Logging.Report("No definition for outfitting module", module.ToString(Formatting.None));
+                            Logging.Report("No definition for outfitting module", moduleJson.ToString(Formatting.None));
                             // Set the name from the JSON
-                            Module.EDName = (string)module["name"];
+                            module.EDName = (string)moduleJson["name"];
                         }
-                        Module.price = module["cost"];
-                        Modules.Add(Module);
+                        module.price = moduleJson["cost"];
+                        modules.Add(module);
                     }
                 }
             }
 
-            return Modules;
+            return modules;
         }
 
         // Obtain the list of station economies from the profile
         public static List<CompanionAppEconomy> EconomiesFromProfile(dynamic json)
         {
-            List<CompanionAppEconomy> Economies = new List<CompanionAppEconomy>();
+            List<CompanionAppEconomy> economies = new List<CompanionAppEconomy>();
 
             if (json["lastStarport"] != null && json["lastStarport"]["economies"] != null)
             {
-                foreach (dynamic economyJson in json["lastStarport"]["economies"])
+                foreach (dynamic o in json["lastStarport"]["economies"])
                 {
-                    dynamic economy = economyJson.Value;
-                    CompanionAppEconomy Economy = new CompanionAppEconomy();
+                    dynamic economyJson = o.Value;
+                    CompanionAppEconomy economy = new CompanionAppEconomy
+                    {
+                        name = (string)economyJson["name"],
+                        proportion = (decimal)economyJson["proportion"]
+                    };
 
-                    Economy.name = (string)economy["name"];
-                    Economy.proportion = (decimal)economy["proportion"];
-                    Economies.Add(Economy);
+                    economies.Add(economy);
                 }
             }
 
-            Logging.Debug("Economies are " + JsonConvert.SerializeObject(Economies));
-            return Economies;
+            Logging.Debug("Economies are " + JsonConvert.SerializeObject(economies));
+            return economies;
         }
 
         // Obtain the list of prohibited commodities from the profile
-        public static List<String> ProhibitedCommoditiesFromProfile(dynamic json)
+        public static List<string> ProhibitedCommoditiesFromProfile(dynamic json)
         {
-            List<String> ProhibitedCommodities = new List<String>();
+            List<string> prohibitedCommodities = new List<string>();
 
             if (json["lastStarport"] != null && json["lastStarport"]["prohibited"] != null)
             {
                 foreach (dynamic prohibitedcommodity in json["lastStarport"]["prohibited"])
                 {
-                    String pc = (string)prohibitedcommodity.Value;
+                    string pc = (string)prohibitedcommodity.Value;
                     if (pc != null)
                     {
-                        ProhibitedCommodities.Add(pc);
+                        prohibitedCommodities.Add(pc);
                     }
                 }
             }
 
-            Logging.Debug("Prohibited Commodities are " + JsonConvert.SerializeObject(ProhibitedCommodities));
-            return ProhibitedCommodities;
+            Logging.Debug("Prohibited Commodities are " + JsonConvert.SerializeObject(prohibitedCommodities));
+            return prohibitedCommodities;
         }
 
         // Obtain the list of commodities from the profile
         public static List<Commodity> CommoditiesFromProfile(dynamic json)
         {
-            List<Commodity> Commodities = new List<Commodity>();
+            List<Commodity> commodities = new List<Commodity>();
 
             if (json["lastStarport"] != null && json["lastStarport"]["commodities"] != null)
             {
                 List<Commodity> commodityErrors = new List<Commodity>();
-                foreach (dynamic commodity in json["lastStarport"]["commodities"])
+                foreach (dynamic o in json["lastStarport"]["commodities"])
                 {
-                    dynamic commodityJson = commodity.Value;
-                    Commodity Commodity = new Commodity();
-                    Commodity eddiCommodity = CommodityDefinitions.CommodityFromEliteID((long)commodity["id"]);
+                    dynamic commodityJson = o.Value;
+                    Commodity commodity = new Commodity();
+                    Commodity eddiCommodity = CommodityDefinitions.CommodityFromEliteID((long)o["id"]);
                     if (eddiCommodity == null)
                     {
                         // If we fail to identify the commodity by EDID, try using the EDName.
-                        eddiCommodity = CommodityDefinitions.FromName((string)commodity["name"]);
+                        eddiCommodity = CommodityDefinitions.FromName((string)o["name"]);
                     }
 
-                    Commodity.EDName = (string)commodity["name"];
-                    Commodity.name = (string)commodity["locName"];
-                    Commodity.category = ((string)commodity["categoryname"]).Trim();
-                    Commodity.avgprice = (int)commodity["meanPrice"];
-                    Commodity.buyprice = (int)commodity["buyPrice"];
-                    Commodity.stock = (int)commodity["stock"];
-                    Commodity.stockbracket = (dynamic)commodity["stockBracket"];
-                    Commodity.sellprice = (int)commodity["sellPrice"];
-                    Commodity.demand = (int)commodity["demand"];
-                    Commodity.demandbracket = (dynamic)commodity["demandBracket"];
+                    commodity.EDName = (string)o["name"];
+                    commodity.name = (string)o["locName"];
+                    commodity.category = ((string)o["categoryname"]).Trim();
+                    commodity.avgprice = (int)o["meanPrice"];
+                    commodity.buyprice = (int)o["buyPrice"];
+                    commodity.stock = (int)o["stock"];
+                    commodity.stockbracket = (dynamic)o["stockBracket"];
+                    commodity.sellprice = (int)o["sellPrice"];
+                    commodity.demand = (int)o["demand"];
+                    commodity.demandbracket = (dynamic)o["demandBracket"];
 
                     List<string> StatusFlags = new List<string>();
-                    foreach (dynamic statusFlag in commodity["statusFlags"])
+                    foreach (dynamic statusFlag in o["statusFlags"])
                     {
                         StatusFlags.Add((string)statusFlag);
                     }
-                    Commodity.StatusFlags = StatusFlags;
-                    Commodities.Add(Commodity);
+                    commodity.StatusFlags = StatusFlags;
+                    commodities.Add(commodity);
 
-                    if (eddiCommodity == null || eddiCommodity.EDName != Commodity.EDName || eddiCommodity.name != Commodity.name
-                        || eddiCommodity.category != Commodity.category)
+                    if (eddiCommodity == null || eddiCommodity.EDName != commodity.EDName || eddiCommodity.name != commodity.name
+                        || eddiCommodity.category != commodity.category)
                     {
                         if (eddiCommodity.name != "Limpet")
                         {
-                            commodityErrors.Add(Commodity);
+                            commodityErrors.Add(commodity);
                         }
                     }
                 }
 
-                if (commodityErrors.Count() > 0)
+                if (commodityErrors.Any())
                 {
                     Logging.Report("Commodity definition errors: " + JsonConvert.SerializeObject(commodityErrors));
                 }
             }
 
-            return Commodities;
+            return commodities;
         }
 
         // Obtain the list of ships available at the station from the profile
-        public static List<Ship> ShipyardFromProfile(dynamic json)
+        public static List<Ship> ShipyardFromProfile(JObject json)
         {
-            List<Ship> Ships = new List<Ship>();
+            List<Ship> ships = new List<Ship>();
 
             if (json["lastStarport"] != null && json["lastStarport"]["ships"] != null)
             {
-                foreach (dynamic shipJson in json["lastStarport"]["ships"]["shipyard_list"])
+                foreach (var o in json["lastStarport"]["ships"]["shipyard_list"])
                 {
-                    dynamic ship = shipJson.Value;
-                    Ship Ship = ShipDefinitions.FromEliteID((long)ship["id"]);
-                    if (Ship.EDName != null)
+                    Ship ship = ShipDefinitions.FromEliteID((long)o["id"]);
+                    if (ship.EDName != null)
                     {
-                        Ship.value = (long)ship["basevalue"];
-                        Ships.Add(Ship);
+                        ship.value = (long)o["basevalue"];
+                        ships.Add(ship);
                     }
                 }
 
-                foreach (dynamic ship in json["lastStarport"]["ships"]["unavailable_list"])
+                foreach (var o in json["lastStarport"]["ships"]["unavailable_list"])
                 {
-                    dynamic shipJson = ship.Value;
-                    Ship Ship2 = ShipDefinitions.FromEliteID((long)ship["id"]);
-                    if (Ship2.EDName != null)
+                    Ship ship = ShipDefinitions.FromEliteID((long)o["id"]);
+                    if (ship.EDName != null)
                     {
-                        Ship2.value = (long)ship["basevalue"];
-                        Ships.Add(Ship2);
+                        ship.value = (long)o["basevalue"];
+                        ships.Add(ship);
                     }
                 }
             }
 
-            return Ships;
+            return ships;
         }
 
         public void setPassword(string password)

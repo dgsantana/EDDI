@@ -9,8 +9,9 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>EddiShipMonitor</RootNamespace>
     <AssemblyName>EddiShipMonitor</AssemblyName>
-    <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -49,8 +50,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.10.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
-      <Private>True</Private>
+      <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="PresentationCore" />
     <Reference Include="PresentationFramework" />
@@ -108,6 +108,10 @@
     <ProjectReference Include="..\DataDefinitions\EddiDataDefinitions.csproj">
       <Project>{0C845B02-E283-43D8-91A7-205AD3397371}</Project>
       <Name>EddiDataDefinitions</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\EDDI.Core\EDDI.Core.csproj">
+      <Project>{C83869E0-6649-4C2C-A9EB-7D771799734C}</Project>
+      <Name>EDDI.Core</Name>
     </ProjectReference>
     <ProjectReference Include="..\EDDI\Eddi.csproj">
       <Project>{EC7BA042-A370-447F-8C3E-241358CEBCBB}</Project>

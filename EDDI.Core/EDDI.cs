@@ -122,9 +122,10 @@ namespace Eddi
 
         private EDDI()
         {
+            //Mutex appMutex = new Mutex(true, $"{Constants.EDDI_NAME}_{Constants.EDDI_VERSION}");
             try
             {
-                Logging.Info(Constants.EDDI_NAME + " " + Constants.EDDI_VERSION + " starting");
+                Logging.Info($"{Constants.EDDI_NAME} {Constants.EDDI_VERSION} starting");
 
                 // Exception handling
                 ExceptionlessClient.Default.Startup("vJW9HtWB2NHiQb7AwVQsBQM6hjWN1sKzHf5PCpW1");
