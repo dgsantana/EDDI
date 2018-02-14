@@ -62,14 +62,7 @@
     <Reference Include="PresentationFramework" />
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.ServiceModel" />
     <Reference Include="System.Xaml" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Net.Http" />
-    <Reference Include="System.Xml" />
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
@@ -85,10 +78,6 @@
     <Compile Include="Watch.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\CompanionAppService\EddiCompanionAppService.csproj">
-      <Project>{462ED721-1C9C-43FA-8A3F-4C1644363A5A}</Project>
-      <Name>EddiCompanionAppService</Name>
-    </ProjectReference>
     <ProjectReference Include="..\DataDefinitions\EddiDataDefinitions.csproj">
       <Project>{0c845b02-e283-43d8-91a7-205ad3397371}</Project>
       <Name>EddiDataDefinitions</Name>
@@ -100,10 +89,6 @@
     <ProjectReference Include="..\EDDI.Core\EDDI.Core.csproj">
       <Project>{c83869e0-6649-4c2c-a9eb-7d771799734c}</Project>
       <Name>EDDI.Core</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\EDDI\Eddi.csproj">
-      <Project>{EC7BA042-A370-447F-8C3E-241358CEBCBB}</Project>
-      <Name>Eddi</Name>
     </ProjectReference>
     <ProjectReference Include="..\Events\EddiEvents.csproj">
       <Project>{2bb41c51-9be0-49c9-91fd-c4e444994ece}</Project>

@@ -143,22 +143,22 @@ namespace EDDI.Core
 
                 // Set up the star map service
                 var starMapCredentials = StarMapConfiguration.FromFile();
-                if (starMapCredentials?.apiKey != null)
+                if (starMapCredentials?.ApiKey != null)
                 {
                     // Commander name might come from star map credentials or the companion app's profile
                     string commanderName = null;
-                    if (starMapCredentials.commanderName != null)
-                        commanderName = starMapCredentials.commanderName;
+                    if (starMapCredentials.CommanderName != null)
+                        commanderName = starMapCredentials.CommanderName;
                     else if (Cmdr?.name != null) commanderName = Cmdr.name;
                     if (commanderName != null)
                     {
-                        StarMapService = new StarMapService(starMapCredentials.apiKey, commanderName);
+                        StarMapService = new StarMapService(starMapCredentials.ApiKey, commanderName);
                         Logging.Info("EDDI access to EDSM is enabled");
                     }
 
                     // Spin off a thread to download & sync EDSM flight logs & system comments in the background
                     var updateThread =
-                        new Thread(() => StarMapService.Sync(starMapCredentials.lastSync)) { IsBackground = true };
+                        new Thread(() => StarMapService.Sync(starMapCredentials.LastSync)) { IsBackground = true };
                     updateThread.Start();
                 }
 

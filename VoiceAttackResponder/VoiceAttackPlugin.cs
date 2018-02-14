@@ -817,7 +817,7 @@ namespace EddiVoiceAttackResponder
                     if (EDDI.Core.Eddi.Instance.StarMapService != null)
                     {
                         // Store in EDSM
-                        EDDI.Core.Eddi.Instance.StarMapService.sendStarMapComment(EDDI.Core.Eddi.Instance.CurrentStarSystem.name, comment);
+                        EDDI.Core.Eddi.Instance.StarMapService.SendStarMapComment(EDDI.Core.Eddi.Instance.CurrentStarSystem.name, comment);
                     }
                 }
             }

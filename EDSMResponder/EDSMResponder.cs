@@ -1,10 +1,9 @@
-﻿using EDDI;
+﻿using System.Collections.Generic;
+using System.Windows.Controls;
 using EddiDataDefinitions;
 using EddiEvents;
 using EddiShipMonitor;
 using EddiStarMapService;
-using System.Collections.Generic;
-using System.Windows.Controls;
 using EDDI.Core;
 using Utilities;
 
@@ -12,169 +11,127 @@ namespace EddiEdsmResponder
 {
     public class EDSMResponder : IEDDIResponder
     {
-        private StarMapService starMapService;
-        private string system;
-
-        public string ResponderName
-        {
-            get { return "EDSM responder"; }
-        }
-
-        public string ResponderVersion
-        {
-            get { return "1.0.0"; }
-        }
-
-        public string ResponderDescription
-        {
-            get
-            {
-                return
-                    "Send details of your travels to EDSM.  EDSM is a third-party tool that provides information on the locations of star systems and keeps a log of the star systems you have visited.  It uses the data provided to crowd-source a map of the galaxy";
-            }
-        }
+        private StarMapService _starMapService;
+        private string _system;
 
         public EDSMResponder()
         {
             Logging.Info("Initialised " + ResponderName + " " + ResponderVersion);
         }
 
+        public string ResponderName => "EDSM responder";
+
+        public string ResponderVersion => "1.0.0";
+
+        public string ResponderDescription =>
+            "Send details of your travels to EDSM.  EDSM is a third-party tool that provides information on the locations of star systems and keeps a log of the star systems you have visited.  It uses the data provided to crowd-source a map of the galaxy";
+
         public bool Start()
         {
             Reload();
-            return starMapService != null;
+            return _starMapService != null;
         }
 
         public void Stop()
         {
-            starMapService = null;
+            _starMapService = null;
         }
 
         public void Reload()
         {
             // Set up the star map service
-            StarMapConfiguration starMapCredentials = StarMapConfiguration.FromFile();
-            if (starMapCredentials != null && starMapCredentials.apiKey != null)
+            var starMapCredentials = StarMapConfiguration.FromFile();
+            if (starMapCredentials?.ApiKey != null)
             {
                 // Commander name might come from star map credentials or the companion app's profile
                 string commanderName = null;
-                if (starMapCredentials.commanderName != null)
-                {
-                    commanderName = starMapCredentials.commanderName;
-                }
-                else if (EDDI.Core.Eddi.Instance.Cmdr != null)
-                {
-                    commanderName = EDDI.Core.Eddi.Instance.Cmdr.name;
-                }
+                if (starMapCredentials.CommanderName != null)
+                    commanderName = starMapCredentials.CommanderName;
+                else if (Eddi.Instance.Cmdr != null) commanderName = Eddi.Instance.Cmdr.name;
                 if (commanderName != null)
-                {
-                    starMapService = new StarMapService(starMapCredentials.apiKey, commanderName);
-                }
+                    _starMapService = new StarMapService(starMapCredentials.ApiKey, commanderName);
             }
         }
 
         public void Handle(Event theEvent)
         {
-            if (EDDI.Core.Eddi.Instance.InCqc)
-            {
-                // We don't do anything whilst in CQC
-                return;
-            }
+            if (Eddi.Instance.InCqc) return;
 
-            if (EDDI.Core.Eddi.Instance.InCrew)
-            {
-                // We don't do anything whilst in multicrew
-                return;
-            }
+            if (Eddi.Instance.InCrew) return;
 
-            if (EDDI.Core.Eddi.Instance.InBeta)
-            {
-                // We don't send data whilst in beta
-                return;
-            }
+            if (Eddi.Instance.InBeta) return;
 
-            if (starMapService != null)
-            {
-                if (theEvent is JumpedEvent)
+            if (_starMapService != null)
+                switch (theEvent)
                 {
-                    JumpedEvent jumpedEvent = (JumpedEvent)theEvent;
+                    case JumpedEvent _:
+                        var jumpedEvent = (JumpedEvent) theEvent;
 
-                    if (jumpedEvent.system != system)
-                    {
-                        Logging.Debug("Sending jump data to EDSM (jumped)");
-                        starMapService.sendStarMapLog(jumpedEvent.timestamp, jumpedEvent.system, jumpedEvent.x, jumpedEvent.y, jumpedEvent.z);
-                        system = jumpedEvent.system;
-                    }
-                }
-                else if (theEvent is CommanderContinuedEvent)
-                {
-                    CommanderContinuedEvent continuedEvent = (CommanderContinuedEvent)theEvent;
-                    starMapService.sendCredits(continuedEvent.credits, continuedEvent.loan);
-                }
-                else if (theEvent is MaterialInventoryEvent)
-                {
-                    MaterialInventoryEvent materialInventoryEvent = (MaterialInventoryEvent)theEvent;
-                    Dictionary<string, int> materials = new Dictionary<string, int>();
-                    Dictionary<string, int> data = new Dictionary<string, int>();
-                    foreach (MaterialAmount ma in materialInventoryEvent.inventory)
-                    {
-                        Material material = Material.FromEDName(ma.edname);
-                        if (material.category == "Element" || material.category == "Manufactured")
+                        if (jumpedEvent.system != _system)
                         {
-                            materials.Add(material.EDName, ma.amount);
+                            Logging.Debug("Sending jump data to EDSM (jumped)");
+                            _starMapService.SendStarMapLog(jumpedEvent.timestamp, jumpedEvent.system, jumpedEvent.x,
+                                jumpedEvent.y, jumpedEvent.z);
+                            _system = jumpedEvent.system;
                         }
-                        else
+
+                        break;
+                    case CommanderContinuedEvent _:
+                        var continuedEvent = (CommanderContinuedEvent) theEvent;
+                        _starMapService.SendCredits(continuedEvent.credits, continuedEvent.loan);
+                        break;
+                    case MaterialInventoryEvent _:
+                        var materialInventoryEvent = (MaterialInventoryEvent) theEvent;
+                        var materials = new Dictionary<string, int>();
+                        var data = new Dictionary<string, int>();
+                        foreach (var ma in materialInventoryEvent.inventory)
                         {
-                            data.Add(material.EDName, ma.amount);
+                            var material = Material.FromEDName(ma.edname);
+                            if (material.category == "Element" || material.category == "Manufactured")
+                                materials.Add(material.EDName, ma.amount);
+                            else
+                                data.Add(material.EDName, ma.amount);
                         }
-                    }
-                    starMapService.sendMaterials(materials);
-                    starMapService.sendData(data);
+
+                        _starMapService.SendMaterials(materials);
+                        _starMapService.SendData(data);
+                        break;
+                    case ShipLoadoutEvent _:
+                        var shipLoadoutEvent = (ShipLoadoutEvent) theEvent;
+                        var ship =
+                            ((ShipMonitor) Eddi.Instance.ObtainMonitor("Ship monitor"))
+                            .GetShip(shipLoadoutEvent.shipid);
+                        _starMapService.SendShip(ship);
+                        break;
+                    case ShipSwappedEvent _:
+                        var shipSwappedEvent = (ShipSwappedEvent) theEvent;
+                        if (shipSwappedEvent.shipid.HasValue)
+                            _starMapService.SendShipSwapped((int) shipSwappedEvent.shipid);
+
+                        break;
+                    case ShipSoldEvent _:
+                        var shipSoldEvent = (ShipSoldEvent) theEvent;
+                        if (shipSoldEvent.shipid.HasValue) _starMapService.SendShipSold((int) shipSoldEvent.shipid);
+
+                        break;
+                    case ShipDeliveredEvent _:
+                        var shipDeliveredEvent = (ShipDeliveredEvent) theEvent;
+                        if (shipDeliveredEvent.shipid.HasValue)
+                            _starMapService.SendShipSwapped((int) shipDeliveredEvent.shipid);
+
+                        break;
+                    case CommanderProgressEvent _:
+                        var progressEvent = (CommanderProgressEvent) theEvent;
+                        if (Eddi.Instance.Cmdr != null && Eddi.Instance.Cmdr.federationrating != null)
+                            _starMapService.SendRanks(Eddi.Instance.Cmdr.combatrating.rank, (int) progressEvent.combat,
+                                Eddi.Instance.Cmdr.traderating.rank, (int) progressEvent.trade,
+                                Eddi.Instance.Cmdr.explorationrating.rank, (int) progressEvent.exploration,
+                                Eddi.Instance.Cmdr.cqcrating.rank, (int) progressEvent.cqc,
+                                Eddi.Instance.Cmdr.federationrating.rank, (int) progressEvent.federation,
+                                Eddi.Instance.Cmdr.empirerating.rank, (int) progressEvent.empire);
+
+                        break;
                 }
-                else if (theEvent is ShipLoadoutEvent)
-                {
-                    ShipLoadoutEvent shipLoadoutEvent = (ShipLoadoutEvent)theEvent;
-                    Ship ship = ((ShipMonitor)EDDI.Core.Eddi.Instance.ObtainMonitor("Ship monitor")).GetShip(shipLoadoutEvent.shipid);
-                    starMapService.sendShip(ship);
-                }
-                else if (theEvent is ShipSwappedEvent)
-                {
-                    ShipSwappedEvent shipSwappedEvent = (ShipSwappedEvent)theEvent;
-                    if (shipSwappedEvent.shipid.HasValue)
-                    {
-                        starMapService.sendShipSwapped((int)shipSwappedEvent.shipid);
-                    }
-                }
-                else if (theEvent is ShipSoldEvent)
-                {
-                    ShipSoldEvent shipSoldEvent = (ShipSoldEvent)theEvent;
-                    if (shipSoldEvent.shipid.HasValue)
-                    {
-                        starMapService.sendShipSold((int)shipSoldEvent.shipid);
-                    }
-                }
-                else if (theEvent is ShipDeliveredEvent)
-                {
-                    ShipDeliveredEvent shipDeliveredEvent = (ShipDeliveredEvent)theEvent;
-                    if (shipDeliveredEvent.shipid.HasValue)
-                    {
-                        starMapService.sendShipSwapped((int)shipDeliveredEvent.shipid);
-                    }
-                }
-                else if (theEvent is CommanderProgressEvent)
-                {
-                    CommanderProgressEvent progressEvent = (CommanderProgressEvent)theEvent;
-                    if (EDDI.Core.Eddi.Instance.Cmdr != null && EDDI.Core.Eddi.Instance.Cmdr.federationrating != null)
-                    {
-                        starMapService.sendRanks(EDDI.Core.Eddi.Instance.Cmdr.combatrating.rank, (int)progressEvent.combat,
-                            EDDI.Core.Eddi.Instance.Cmdr.traderating.rank, (int)progressEvent.trade,
-                            EDDI.Core.Eddi.Instance.Cmdr.explorationrating.rank, (int)progressEvent.exploration,
-                            EDDI.Core.Eddi.Instance.Cmdr.cqcrating.rank, (int)progressEvent.cqc,
-                            EDDI.Core.Eddi.Instance.Cmdr.federationrating.rank, (int)progressEvent.federation,
-                            EDDI.Core.Eddi.Instance.Cmdr.empirerating.rank, (int)progressEvent.empire);
-                    }
-                }
-            }
         }
 
         public UserControl ConfigurationTabItem()

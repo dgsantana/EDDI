@@ -9,14 +9,14 @@ namespace EddiStarMapService
     public class StarMapConfiguration
     {
         [JsonProperty("apiKey")]
-        public string apiKey { get; set; }
+        public string ApiKey { get; set; }
         [JsonProperty("commanderName")]
-        public string commanderName { get; set; }
+        public string CommanderName { get; set; }
         [JsonProperty("lastSync")]
-        public DateTime lastSync { get; set; } = DateTime.MinValue;
+        public DateTime LastSync { get; set; } = DateTime.MinValue;
 
         [JsonIgnore]
-        private string dataPath;
+        private string _dataPath;
 
         /// <summary>
         /// Obtain credentials from a file.  If the file name is not supplied the the default
@@ -51,7 +51,7 @@ namespace EddiStarMapService
                 configuration = new StarMapConfiguration();
             }
 
-            configuration.dataPath = filename;
+            configuration._dataPath = filename;
             return configuration;
         }
 
@@ -60,9 +60,9 @@ namespace EddiStarMapService
         /// </summary>
         public void Clear()
         {
-            apiKey = null;
-            commanderName = null;
-            lastSync = DateTime.MinValue;
+            ApiKey = null;
+            CommanderName = null;
+            LastSync = DateTime.MinValue;
         }
 
         /// <summary>
@@ -74,7 +74,7 @@ namespace EddiStarMapService
         {
             if (filename == null)
             {
-                filename = dataPath;
+                filename = _dataPath;
             }
             if (filename == null)
             {
